@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import auth, group
+from routers import auth, group, expense, balance
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="SplitMint API")
@@ -15,6 +15,8 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(group.router)
+app.include_router(expense.router)
+app.include_router(balance.router)
 
 @app.get("/")
 def root():

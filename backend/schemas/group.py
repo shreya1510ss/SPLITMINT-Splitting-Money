@@ -19,3 +19,6 @@ class GroupCreate(BaseModel):
 class GroupOut(GroupCreate):
     id: str
     creator_id: str  # The ID of the authenticated user who created the group
+
+class GroupUpdate(BaseModel):
+    name: str = Field(..., min_length=2, description="The new name for the expense group")

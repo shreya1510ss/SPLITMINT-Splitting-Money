@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from bson import ObjectId
 from database.mongo import database
-from schemas.group import GroupCreate, GroupOut
+from schemas.group import GroupCreate, GroupOut, Participant, GroupUpdate
+from typing import List
 
 router = APIRouter(prefix="/api/groups", tags=["groups"])
 
@@ -55,11 +56,140 @@ async def delete_group(group_id: str):
     if not ObjectId.is_valid(group_id):
         raise HTTPException(status_code=400, detail="Invalid Group ID format")
         
-    # 2. We MUST convert the string into a MongoDB ObjectId!
+    # 1. CASCADE DELETE: Delete all expenses linked to this group first
+    await database.expenses.delete_many({"group_id": group_id})
+    
+    # 2. Finally, delete the group itself
     result = await database.groups.delete_one({"_id": ObjectId(group_id)})
     
-    # 3. Check if anything was actually deleted (to prevent false successes)
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Group not found")
         
-    return {"message": "Group deleted successfully"}
+    return {"message": "Group and all its expenses deleted successfully"}
+
+# -------------------------------------------------------------
+# 1B. EDIT GROUP NAME
+# -------------------------------------------------------------
+@router.patch("/{group_id}", response_model=GroupOut)
+async def update_group(group_id: str, group_update: GroupUpdate):
+    if not ObjectId.is_valid(group_id):
+        raise HTTPException(status_code=400, detail="Invalid Group ID format")
+    
+    # 1. Update the name in MongoDB
+    result = await database.groups.update_one(
+        {"_id": ObjectId(group_id)},
+        {"$set": {"name": group_update.name}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Group not found")
+        
+    # 2. Return the freshly updated group
+    updated_group = await database.groups.find_one({"_id": ObjectId(group_id)})
+    updated_group["id"] = str(updated_group["_id"])
+    return updated_group
+
+# -------------------------------------------------------------
+# 2. ADD PARTICIPANTS
+# -------------------------------------------------------------
+@router.post("/{group_id}/participants", response_model=GroupOut)
+async def add_participants(group_id: str, new_participants: List[Participant]):
+    if not ObjectId.is_valid(group_id):
+        raise HTTPException(status_code=400, detail="Invalid Group ID format")
+    
+    # 1. Fetch current group
+    group = await database.groups.find_one({"_id": ObjectId(group_id)})
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    # 2. Check internship limit (max 4)
+    current_participants = group.get("participants", [])
+    if len(current_participants) + len(new_participants) > 4:
+        raise HTTPException(status_code=400, detail="Groups can have a maximum of 4 participants.")
+    
+    # 3. Prevent duplicate names
+    existing_names = {p["name"] for p in current_participants}
+    for p in new_participants:
+        if p.name in existing_names:
+            raise HTTPException(status_code=400, detail=f"Participant '{p.name}' already exists in this group.")
+    
+    # 4. Add them!
+    converted_participants = [p.model_dump() for p in new_participants]
+    result = await database.groups.update_one(
+        {"_id": ObjectId(group_id)},
+        {"$push": {"participants": {"$each": converted_participants}}}
+    )
+    
+    # 5. Return the updated group
+    updated_group = await database.groups.find_one({"_id": ObjectId(group_id)})
+    updated_group["id"] = str(updated_group["_id"])
+    return updated_group
+
+# -------------------------------------------------------------
+# 3. EDIT PARTICIPANT NAME
+# -------------------------------------------------------------
+@router.patch("/{group_id}/participants/{old_name}", response_model=GroupOut)
+async def update_participant_name(group_id: str, old_name: str, new_name: str):
+    if not ObjectId.is_valid(group_id):
+        raise HTTPException(status_code=400, detail="Invalid Group ID format")
+    
+    # 1. Update the name in the groups collection
+    # MongoDB trick: use $[elem] to update a specific element in an array
+    result = await database.groups.update_one(
+        {"_id": ObjectId(group_id), "participants.name": old_name},
+        {"$set": {"participants.$.name": new_name}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Participant or Group not found")
+    
+    # 2. UPDATE ALL LINKED EXPENSES (Payer Name)
+    await database.expenses.update_many(
+        {"group_id": group_id, "payer_name": old_name},
+        {"$set": {"payer_name": new_name}}
+    )
+    
+    # 3. UPDATE ALL LINKED EXPENSES (Splits)
+    await database.expenses.update_many(
+        {"group_id": group_id, "splits.participant_name": old_name},
+        {"$set": {"splits.$.participant_name": new_name}}
+    )
+    
+    updated_group = await database.groups.find_one({"_id": ObjectId(group_id)})
+    updated_group["id"] = str(updated_group["_id"])
+    return updated_group
+
+# -------------------------------------------------------------
+# 4. REMOVE PARTICIPANT
+# -------------------------------------------------------------
+@router.delete("/{group_id}/participants/{name}")
+async def remove_participant(group_id: str, name: str):
+    if not ObjectId.is_valid(group_id):
+        raise HTTPException(status_code=400, detail="Invalid Group ID format")
+    
+    # 1. Check if the participant is involved in any expenses!
+    # We check both Payer and Splits
+    linked_expense = await database.expenses.find_one({
+        "group_id": group_id,
+        "$or": [
+            {"payer_name": name},
+            {"splits.participant_name": name}
+        ]
+    })
+    
+    if linked_expense:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot remove '{name}' because they are linked to existing expenses. Delete the expenses first."
+        )
+    
+    # 2. Remove them from the group's participant list
+    result = await database.groups.update_one(
+        {"_id": ObjectId(group_id)},
+        {"$pull": {"participants": {"name": name}}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Participant not found in this group.")
+        
+    return {"message": f"Participant '{name}' removed successfully"}
