@@ -1,1 +1,1 @@
-# SPLITMINT-Splitting-Money
+# SPLITMINT

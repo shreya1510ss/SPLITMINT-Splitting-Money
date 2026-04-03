@@ -1,0 +1,21 @@
+from fastapi import FastAPI
+from routers import auth, group
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI(title="SplitMint API")
+
+# Setup CORS to allow our React frontend to communicate with this backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth.router)
+app.include_router(group.router)
+
+@app.get("/")
+def root():
+    return {"message": "Welcome to SplitMint API. The engine is running."}
