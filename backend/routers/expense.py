@@ -54,3 +54,32 @@ async def delete_expense(expense_id: str):
         raise HTTPException(status_code=404, detail="Expense not found")
         
     return {"message": "Expense deleted successfully"}
+
+@router.put("/{expense_id}", response_model=ExpenseOut)
+async def update_expense(expense_id: str, expense_in: ExpenseCreate):
+    # 1. Check if the string is a valid MongoDB ID format
+    if not ObjectId.is_valid(expense_id):
+        raise HTTPException(status_code=400, detail="Invalid Expense ID format")
+        
+    # 2. Process the mathematical logic for splits BEFORE touching the database
+    calculated_expense = calculate_splits(expense_in)
+        
+    # 3. Convert to a standard dictionary for MongoDB
+    expense_dict = calculated_expense.model_dump()
+    
+    # 4. Update in MongoDB's 'expenses' collection
+    result = await database.expenses.update_one(
+        {"_id": ObjectId(expense_id)},
+        {"$set": expense_dict}
+    )
+    
+    # 5. Handle failure if the ID did not match any document
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Expense not found")
+        
+    # 6. Fetch the newly updated expense
+    updated_expense = await database.expenses.find_one({"_id": ObjectId(expense_id)})
+    
+    # 7. Format it nicely (MongoDB uses _id, our model uses id)
+    updated_expense["id"] = str(updated_expense["_id"])
+    return updated_expense
