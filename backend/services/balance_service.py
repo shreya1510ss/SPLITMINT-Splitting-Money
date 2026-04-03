@@ -1,34 +1,47 @@
 from typing import List, Dict
 
-def calculate_net_balances(expenses: List[dict]) -> Dict[str, float]:
+def calculate_group_stats(expenses: List[dict]) -> dict:
     """
-    Computes positive and negative net balances for each person in a group.
-    Returns: {"Alice": 25.0, "Bob": -15.0, "Charlie": -10.0}
+    Computes detailed group-level stats for dashboards.
+    Returns: {
+        "net_balances": {"Alice": 25.0, ...},
+        "contributions": {"Alice": 150.0, ...},
+        "shares": {"Alice": 125.0, ...},
+        "frequency": {"Alice": 3, ...}
+    }
     """
-    balances = {}
+    net_balances = {}
+    contributions = {}
+    shares = {}
+    frequency = {}
 
     for expense in expenses:
         payer = expense.get("payer_name")
         amount = expense.get("amount", 0.0)
         
-        # Payer paid the total amount, so they get a + credit initially
-        if payer not in balances:
-            balances[payer] = 0.0
-        balances[payer] += amount
+        # 1. Update Contributions (Total Paid) & Frequency
+        contributions[payer] = contributions.get(payer, 0.0) + amount
+        frequency[payer] = frequency.get(payer, 0) + 1
+        
+        # 2. Update Net Balances (Payer gets credit)
+        net_balances[payer] = net_balances.get(payer, 0.0) + amount
 
-        # Now deduct everyone's exact consumed share 
+        # 3. Update Shares (Total Consumed) & deduct from Net
         splits = expense.get("splits", [])
         for split in splits:
             participant = split.get("participant_name")
             owed_share = split.get("owed_share", 0.0)
 
-            if participant not in balances:
-                balances[participant] = 0.0
-            
-            balances[participant] -= owed_share
+            shares[participant] = shares.get(participant, 0.0) + owed_share
+            net_balances[participant] = net_balances.get(participant, 0.0) - owed_share
 
-    # Round to 2 decimal places to avoid Python floating point anomalies
-    return {k: round(v, 2) for k, v in balances.items() if round(abs(v), 2) > 0}
+    # Rounding and cleaning up results
+    return {
+        "net_balances": {k: round(v, 2) for k, v in net_balances.items() if abs(v) > 0.01},
+        "contributions": {k: round(v, 2) for k, v in contributions.items()},
+        "shares": {k: round(v, 2) for k, v in shares.items()},
+        "frequency": frequency
+    }
 
 def simplify_debts(balances: Dict[str, float]) -> List[dict]:
     """

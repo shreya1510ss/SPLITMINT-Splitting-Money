@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
+from typing import Optional
+from datetime import datetime
 from bson import ObjectId
 from database.mongo import database
 from schemas.expense import ExpenseCreate, ExpenseOut
@@ -25,13 +27,53 @@ async def create_expense(expense_in: ExpenseCreate):
     return created_expense
 
 @router.get("/group/{group_id}")
-async def get_group_expenses(group_id: str):
-    """Fetch all expenses associated with a specific group"""
-    # Grab up to 100 recent expenses for this group
-    cursor = database.expenses.find({"group_id": group_id})
+async def get_group_expenses(
+    group_id: str,
+    search: Optional[str] = Query(None, description="Search by expense description"),
+    participant: Optional[str] = Query(None, description="Filter by participant (payer or split)"),
+    start_date: Optional[datetime] = Query(None, description="Filter from this date"),
+    end_date: Optional[datetime] = Query(None, description="Filter until this date"),
+    min_amount: Optional[float] = Query(None, description="Filter by minimum amount"),
+    max_amount: Optional[float] = Query(None, description="Filter by maximum amount")
+):
+    """Fetch expenses with optional search and filtering capabilities"""
+    # 1. Base filter: Always lock the query to the specific group
+    query = {"group_id": group_id}
+
+    # 2. Text Search (Case-insensitive)
+    if search:
+        query["description"] = {"$regex": search, "$options": "i"}
+
+    # 3. Participant Filter (Payer OR in splits)
+    if participant:
+        query["$or"] = [
+            {"payer_name": participant},
+            {"splits.participant_name": participant}
+        ]
+
+    # 4. Date Range Filter
+    if start_date or end_date:
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date
+        if end_date:
+            date_filter["$lte"] = end_date
+        query["date"] = date_filter
+
+    # 5. Amount Range Filter
+    if min_amount is not None or max_amount is not None:
+        amount_filter = {}
+        if min_amount is not None:
+            amount_filter["$gte"] = min_amount
+        if max_amount is not None:
+            amount_filter["$lte"] = max_amount
+        query["amount"] = amount_filter
+
+    # 6. Execute Query with "Newest First" Sorting
+    cursor = database.expenses.find(query).sort("date", -1)
     expenses = await cursor.to_list(length=100)
     
-    # Format the documents to map _id to string for the frontend
+    # 7. Format the documents to map _id to string for the frontend
     formatted_expenses = []
     for exp in expenses:
         exp["id"] = str(exp["_id"])
