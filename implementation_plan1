@@ -1,0 +1,83 @@
+# SplitMint Implementation & Learning Plan
+
+This document outlines the step-by-step strategy for building SplitMint. We will use a decoupled architecture, which is widely adopted in the industry and excellent for learning.
+- **Frontend**: React.js with TypeScript (using Vite for fast builds) and TailwindCSS for styling.
+- **Backend**: Python with FastAPI (high performance, great for building REST APIs quickly).
+- **Database**: MongoDB (NoSQL document database, free tier on MongoDB Atlas).
+
+## User Review Required
+
+> [!IMPORTANT]  
+> Please review this tech stack and the coding practices below. Let me know if you are ready to proceed with Phase 1, or if you have any questions before we begin!
+
+---
+
+## 🛠️ Industry-Standard Coding Practices
+
+To ensure this project acts as an excellent internship portfolio piece, we will strictly enforce these best practices:
+
+### 1. Strongly Typed Code
+- **TypeScript**: We will avoid `any` types. Instead, we'll define strict `interfaces` and `type` aliases for all data models and API responses.
+- **Python**: We will use Python Type Hints (`def calculate(amount: float) -> str:`) and `Pydantic` models in FastAPI to ensure the backend data structure is rigorously validated before hitting the database.
+
+### 2. Clean Architecture & Modular Code
+- **Separation of Concerns**: The backend will be split into isolated layers:
+  - `routers/`: Handles HTTP requests and responses.
+  - `schemas/`: Pydantic models for data validation.
+  - `services/`: Contains the core business logic (e.g., the complex debt-simplification algorithms).
+  - `database/`: Handles direct MongoDB interactions.
+- **Reusable React Components**: UI elements like buttons, inputs, and modals will be abstracted into highly reusable components to keep the codebase DRY (Don't Repeat Yourself).
+
+### 3. Comprehensive Error Handling
+- **Backend**: We will implement standard HTTP exception handling in FastAPI (returning 400 Bad Request, 401 Unauthorized, 404 Not Found, or 500 Internal Error) rather than crashing the server.
+- **Frontend**: We will use React Error Boundaries and friendly "toast" notifications (or alerts) so the user is precisely informed when something goes wrong.
+
+### 4. Code Formatting & Linting
+- **Prettier/ESLint** (Frontend) and **Ruff/Black** (Backend) will be configured to ensure consistent code styling across our entire project (indentation, quote styles, spacing).
+
+### 5. Git and Version Control Best Practices
+- Keep commits small, logical, and focused.
+- Use descriptive commit messages (e.g., `feat: implemented equal expense splitting logic` instead of `updated stuff`).
+
+---
+
+## Phase 1: Project Setup & Authentication
+**Goal**: Set up the skeleton of both apps and allow users to create accounts safely.
+* **Backend**: Setup Python virtual environment, FastAPI, Motor (MongoDB async driver), and JWT auth endpoints.
+* **Frontend**: Setup React/Vite with TypeScript, React Router for protected routes, and Login/Register UIs.
+* **Learning Outcomes**: Modern React initialization, Python API creation, and core security fundamentals (`bcrypt` & JWTs).
+
+## Phase 2: Groups & Participants Management
+**Goal**: Allow users to create expense groups and add up to 3 additional participants per group.
+* **Backend**: CRUD routes for Groups, enforcing max participant limits, handling cascade deletions.
+* **Frontend**: Dashboards for group management, UI for assigning colors/avatars.
+* **Learning Outcomes**: NoSQL database modeling (One-to-Few relationships), React form handling and UI state management.
+
+## Phase 3: Expenses and Splitting Logic
+**Goal**: The core feature—adding expenses and accurately splitting them among participants.
+* **Backend**: Build split modes (Equal, Custom, Percentage). Prevent float precision issues using safe rounding math.
+* **Frontend**: Dynamic UI form that adapts based on the "split mode" selected.
+* **Learning Outcomes**: Handling float precision in programming, highly dynamic React forms.
+
+## Phase 4: The Balance Engine & Settlement Algorithms
+**Goal**: Calculate who owes whom and compute the minimum number of transactions needed to settle debts.
+* **Backend**: Develop the service layer holding the "minimal settlement" optimization algorithm.
+* **Frontend**: Render directional owed amounts neatly on the dashboard.
+* **Learning Outcomes**: Complex algorithmic thinking (Graph traversal / Cash Flow optimization matching).
+
+## Phase 5: Visualizations, Dashboards & Filtering
+**Goal**: Provide users with insights, tables, and robust search functionality.
+* **Frontend**: Summary cards, transaction histories, and modern table components.
+* **Backend**: Efficient database querying with regex and date ranges.
+* **Learning Outcomes**: Creating pleasing UI/UX analytics and optimizing DB query performance.
+
+## Phase 6: Next-Gen AI Feature (MintSense)
+**Goal**: Natural Language Processing to extract expense data (e.g., "I paid $50 for pizza for me and Bob").
+* **Integration**: Call OpenAI or Groq API from Python safely.
+* **Learning Outcomes**: Prompt engineering with strict JSON output schemas, integrating 3rd party AI APIs into enterprise backends.
+
+---
+
+## Open Questions
+- Do you have any prior experience with Python or React? 
+- Would you like us to start executing **Phase 1** together right now? I can guide you through creating the initial folders and installing the necessary tools!
