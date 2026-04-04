@@ -230,8 +230,8 @@ const Groups = () => {
       ) : filteredGroups.length > 0 ? (
         <div className="section-grid">
           {filteredGroups.map(group => (
-            <div key={group.id} className="card-premium group-card flex-column">
-              <div className="flex-between mb-2">
+            <div key={group.id} className="card-premium group-card">
+              <div className="flex-between">
                 <h3 className="text-lg font-bold">{group.name}</h3>
                 <div className="flex-center gap-1 text-muted text-small">
                   <Users size={14} />
@@ -239,22 +239,22 @@ const Groups = () => {
                 </div>
               </div>
               
-              <div className="group-stats-row mb-6 mt-2">
+              <div className="group-stats-row">
                 <div className="flex-column gap-1">
                   <span className="text-tiny text-muted uppercase tracking-tighter">Total Spent</span>
-                  <span className="text-sm font-bold text-white">${group.totalSpent?.toFixed(2)}</span>
+                  <span className="text-sm font-bold text-white">{group.totalSpent?.toFixed(2)}</span>
                 </div>
                 <div className="flex-column gap-1 text-right">
                   <span className="text-tiny text-muted uppercase tracking-tighter">Your Position</span>
                   <span className={`text-sm font-bold ${group.userBalance! >= 0 ? 'text-primary' : 'text-orange'}`}>
-                    {group.userBalance! >= 0 ? 'Owed ' : 'Owe '}${Math.abs(group.userBalance!).toFixed(2)}
+                    {group.userBalance! >= 0 ? 'Owed ' : 'Owe '}{Math.abs(group.userBalance!).toFixed(2)}
                   </span>
                 </div>
               </div>
 
-              <Link to={`/groups/${group.id}`} className="text-btn flex-center gap-1 mt-auto">
+              <Link to={`/groups/${group.id}`} className="btn-enter-group flex-center gap-2 mt-auto">
                 <span>Enter Group</span>
-                <ArrowRight size={16} />
+                <ArrowRight size={18} strokeWidth={2.5} />
               </Link>
             </div>
           ))}
@@ -394,11 +394,20 @@ const Groups = () => {
         .groups-page { display: flex; flex-direction: column; gap: 2rem; }
         .search-bar { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.5rem; }
         .search-input { background: none; border: none; color: #fff; width: 100%; outline: none; }
-        .group-card { min-height: 180px; padding: 1.5rem; }
-        .group-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        .text-tiny { font-size: 0.65rem; }
+        .group-card { min-height: 200px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+        .group-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
         .relative { position: relative; }
         .badge-registered { background: rgba(16, 233, 163, 0.12); color: var(--primary); padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid rgba(16, 233, 163, 0.25); flex-shrink: 0; }
+        .btn-enter-group { 
+          width: 100%; padding: 0.85rem; border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 800; 
+          background: rgba(16, 233, 163, 0.05); border: 1px solid rgba(16, 233, 163, 0.15); color: var(--primary); 
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); text-decoration: none; 
+        }
+        .btn-enter-group:hover { 
+          background: var(--primary); color: #000; transform: translateY(-3px); 
+          box-shadow: 0 8px 24px var(--primary-glow); border-color: transparent; 
+        }
+        .btn-enter-group span { letter-spacing: 0.02em; }
       `}</style>
     </div>
   );
