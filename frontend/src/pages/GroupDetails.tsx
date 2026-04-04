@@ -145,7 +145,7 @@ const GroupDetails = () => {
             <h1 className="text-gradient leading-tight">{group.name}</h1>
           </div>
         </div>
-        <div className="flex-center gap-3">
+        <div className="flex-center gap-5">
           <button className="icon-btn-secondary" title="Group Settings" onClick={() => setShowSettings(true)}>
             <Settings size={20} />
           </button>
