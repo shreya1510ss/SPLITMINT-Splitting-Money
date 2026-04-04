@@ -17,7 +17,7 @@ from passlib.context import CryptContext
 # ---------------------------------------------------------------------------
 # Configuration – read from environment (fallback to sensible defaults)
 # ---------------------------------------------------------------------------
-SECRET_KEY: str = os.getenv("SECRET_KEY", "splitmint_super_secret_dev_key")
+SECRET_KEY: str = os.getenv("JWT_SECRET", os.getenv("SECRET_KEY", "splitmint_super_secret_dev_key"))
 ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
 # Token expiry for development – 8 hours (can be overridden per call)
 DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
