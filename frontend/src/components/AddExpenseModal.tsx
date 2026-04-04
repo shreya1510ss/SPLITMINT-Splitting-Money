@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Loader2, DollarSign, Calendar, Users, FileText, PieChart, LayoutGrid, Scale } from 'lucide-react';
 import clsx from 'clsx';
 import { api } from '../api/api';
+import { ModalPortal } from './ModalPortal';
 
 function participantInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -181,6 +182,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
   if (!isOpen) return null;
 
   return (
+    <ModalPortal>
     <div className="modal-overlay">
       <div className="modal-content modal-content--expense glass-panel animate-fade-in shadow-xl">
         <header className="modal-header flex-between mb-8">
@@ -458,6 +460,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

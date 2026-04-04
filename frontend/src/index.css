@@ -76,6 +76,11 @@ h1, h2, h3, h4 {
 .gap-4 { gap: 1rem; }
 .gap-6 { gap: 1.5rem; }
 
+.flex-1 {
+  flex: 1;
+  min-width: 0;
+}
+
 .section-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -191,39 +196,174 @@ h1, h2, h3, h4 {
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
-/* Global Modal System Enhancement */
+/* Global Modal System Enhancement
+   Overlay does NOT scroll — only .modal-content scrolls. Prevents backdrop “moving” on wheel/touch. */
 .modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 2000;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: max(1rem, env(safe-area-inset-top, 0px)) 1.25rem
-    max(1rem, env(safe-area-inset-bottom, 0px));
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  background: rgba(8, 10, 15, 0.85);
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  overscroll-behavior: none;
+  padding-inline: max(1rem, env(safe-area-inset-left, 0px))
+    max(1rem, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+  background: rgba(8, 10, 15, 0.88);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+.modal-overlay::before,
+.modal-overlay::after {
+  content: "";
+  flex: 1 1 auto;
+  min-height: max(0.75rem, env(safe-area-inset-top, 0px));
+  width: 100%;
+  pointer-events: none;
+}
+
+.modal-overlay::after {
+  min-height: max(0.75rem, env(safe-area-inset-bottom, 0px));
 }
 
 .modal-content {
   width: 100%;
   max-width: 520px;
-  margin: 1rem auto;
+  flex: 0 0 auto;
+  margin: 0;
   padding: 2.5rem;
   background: var(--glass);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-premium);
   position: relative;
-  flex-shrink: 0;
   max-height: calc(100vh - 2rem);
   max-height: calc(100dvh - 2rem);
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.modal-content--create-group {
+  max-width: 460px;
+}
+
+/* Groups — create group modal (shared layout tokens) */
+.create-group-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-premium);
+  z-index: 20;
+  padding: 0.35rem;
+}
+
+.create-group-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid transparent;
+}
+
+.create-group-result:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.create-group-participants-box {
+  min-height: 5.5rem;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--card-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-content: flex-start;
+}
+
+.create-group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: rgba(16, 233, 163, 0.12);
+  color: var(--primary);
+  border: 1px solid rgba(16, 233, 163, 0.25);
+}
+
+.create-group-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  opacity: 0.85;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+.create-group-chip button:hover {
+  opacity: 1;
+  color: #fff;
+}
+
+.create-group-add-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.65rem;
+}
+
+.create-group-add-row .input-premium {
+  flex: 1;
+  min-width: 0;
+}
+
+.create-group-icon-btn {
+  flex-shrink: 0;
+  width: 3rem;
+  min-height: 3rem;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.create-group-icon-btn:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: scale(1.02);
+  box-shadow: 0 6px 18px -6px var(--primary-glow);
+}
+
+.create-group-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Header scrolls with the modal — no sticky, so the X stays in the same sheet as the form */

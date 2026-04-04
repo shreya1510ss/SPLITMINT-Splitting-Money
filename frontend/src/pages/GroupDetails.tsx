@@ -6,20 +6,17 @@ import {
   ArrowLeft, 
   Plus, 
   TrendingUp, 
-  DollarSign, 
-  Users, 
-  ChevronRight,
-  HandCoins,
   Loader2,
   Trash2,
   Edit2,
-  X,
-  CreditCard,
   Settings,
-  ArrowRight
+  ArrowRight,
+  HandCoins,
+  CheckCircle2
 } from 'lucide-react';
 import AddExpenseModal from '../components/AddExpenseModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface Participant {
   name: string;
@@ -48,6 +45,14 @@ interface GroupBalances {
   shares: Record<string, number>;
 }
 
+function nameInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.trim().slice(0, 2).toUpperCase() || '?';
+}
+
 const GroupDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -58,14 +63,11 @@ const GroupDetails = () => {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddExpense, setShowAddExpense] = useState(false);
-  const [showSettleUp, setShowSettleUp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
-  
-  // Settle Up State
-  const [settlePayer, setSettlePayer] = useState('');
-  const [settleRecipient, setSettleRecipient] = useState('');
-  const [settleAmount, setSettleAmount] = useState('');
+  const [recordingSettlementKey, setRecordingSettlementKey] = useState<string | null>(null);
+
+  useBodyScrollLock(showAddExpense || showSettings);
 
   useEffect(() => {
     if (id) {
@@ -106,32 +108,6 @@ const GroupDetails = () => {
     }
   };
 
-  const handleSettleUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!settlePayer || !settleRecipient || !settleAmount || settlePayer === settleRecipient) return;
-
-    try {
-      await api.post('/expenses/', {
-        group_id: id,
-        description: `Settle Up: ${settlePayer} → ${settleRecipient}`,
-        amount: parseFloat(settleAmount),
-        date: new Date().toISOString(),
-        payer_name: settlePayer,
-        split_mode: 'custom',
-        type: 'settlement',
-        splits: [{
-          participant_name: settleRecipient,
-          owed_share: parseFloat(settleAmount)
-        }]
-      });
-      setShowSettleUp(false);
-      setSettleAmount('');
-      fetchData();
-    } catch (err) {
-      alert('Failed to settle up');
-    }
-  };
-
   const handleDeleteGroup = async () => {
     if (!window.confirm('Are you sure you want to delete this group? All expenses will be lost.')) return;
     try {
@@ -154,7 +130,9 @@ const GroupDetails = () => {
   if (!group || !balances) return <div className="text-center py-20 text-muted">Group not found</div>;
 
   const currentUserName = user?.name || '';
-  const userNet = balances.net_balances[currentUserName] || 0;
+  const settlementTx = balances.transactions;
+  const hasActiveSettlements = settlementTx.length > 0;
+  const settlementsTotalOwed = settlementTx.reduce((sum, t) => sum + t.amount, 0);
 
   return (
     <div className="group-details-page animate-fade-in shadow-inner">
@@ -190,59 +168,129 @@ const GroupDetails = () => {
       <div className="details-layout grid grid-cols-12 gap-10">
         {/* Settlement section (Now takes up full width for better focus as requested) */}
         <div className="col-span-12 flex-column gap-8">
-          <section className="card-premium p-8">
-            <div className="flex-between mb-8">
-              <div>
-                <h3 className="text-small uppercase font-bold tracking-widest text-primary mb-1">Active Settlements</h3>
-                <p className="text-muted text-tiny">Tally of who needs to pay whom. Check the box once paid.</p>
-              </div>
-              <div className="flex-center gap-4">
-                <button className="btn-secondary text-tiny py-2" onClick={() => setShowSettleUp(true)}>Manual Record</button>
-              </div>
-            </div>
-            
-            <div className="settlement-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {balances.transactions.length > 0 ? (
-                balances.transactions.map((t, i) => (
-                  <div key={i} className="settlement-card glass-panel p-5 flex-between border-l-4 border-primary">
-                    <div className="flex-column gap-1">
-                      <div className="flex-center gap-2">
-                        <span className="font-bold text-white">{t.from}</span>
-                        <ArrowRight size={14} className="text-muted" />
-                        <span className="font-bold text-white">{t.to}</span>
+          <section
+            className={`settlements-section card-premium overflow-hidden ${
+              hasActiveSettlements ? 'settlements-section--active' : 'settlements-section--clear'
+            }`}
+          >
+            {hasActiveSettlements ? (
+              <>
+                <div className="settlements-active-banner">
+                  <div className="settlements-active-banner-inner flex-between gap-4 flex-wrap">
+                    <div className="flex-center gap-3">
+                      <div className="settlements-banner-icon">
+                        <HandCoins size={22} strokeWidth={2.25} />
                       </div>
-                      <span className="text-2xl font-black text-primary">${t.amount.toFixed(2)}</span>
+                      <div>
+                        <h3 className="settlements-banner-title">Balances to settle</h3>
+                        <p className="settlements-banner-sub text-muted text-tiny">
+                          These are simplified payments that clear what people owe. Mark each one when the money has been sent or handed over.
+                        </p>
+                      </div>
                     </div>
-                    <label className="settle-checkbox-container" title="Mark as settled">
-                      <input 
-                        type="checkbox" 
-                        onChange={async (e) => {
-                          if (e.target.checked) {
-                            try {
-                              await api.post('/settlements/', {
-                                group_id: id,
-                                from_name: t.from,
-                                to_name: t.to,
-                                amount: t.amount
-                              });
-                              fetchData();
-                            } catch (err) {
-                              alert('Failed to record settlement');
-                              e.target.checked = false;
-                            }
-                          }
-                        }}
-                      />
-                      <span className="checkmark"></span>
-                    </label>
+                    <div className="settlements-summary-stack flex-column gap-1 text-right">
+                      <span className="settlements-summary-label text-tiny uppercase text-muted font-bold tracking-widest">
+                        Total to move
+                      </span>
+                      <span className="settlements-summary-amount">${settlementsTotalOwed.toFixed(2)}</span>
+                      <span className="text-muted text-tiny">
+                        {settlementTx.length} payment{settlementTx.length === 1 ? '' : 's'}
+                      </span>
+                    </div>
                   </div>
-                ))
-              ) : (
-                <div className="col-span-full text-center py-10 bg-primary/05 border border-dashed border-primary/20 rounded-2xl">
-                  <p className="text-primary font-bold tracking-widest uppercase">🎉 Everyone is settled up! 🎉</p>
                 </div>
-              )}
-            </div>
+                <div className="p-8 pt-6">
+                  <div className="settlement-grid">
+                    {settlementTx.map((t, i) => {
+                      const stKey = `st-${i}-${t.from}-${t.to}-${t.amount}`;
+                      const isRecording = recordingSettlementKey === stKey;
+                      const youPay = t.from === currentUserName;
+                      const youReceive = t.to === currentUserName;
+                      return (
+                        <div key={stKey} className="settlement-card-enhanced">
+                          <div className="settlement-card-top">
+                            {youPay && (
+                              <span className="settlement-you-badge">You pay</span>
+                            )}
+                            {youReceive && !youPay && (
+                              <span className="settlement-you-badge settlement-you-badge--in">You receive</span>
+                            )}
+                            {!youPay && !youReceive && (
+                              <span className="settlement-you-badge settlement-you-badge--muted">Between members</span>
+                            )}
+                          </div>
+                          <div className="settlement-parties">
+                            <div className="settlement-party">
+                              <span className="settlement-avatar settlement-avatar--from">
+                                {nameInitials(t.from)}
+                              </span>
+                              <div className="settlement-party-text">
+                                <span className="settlement-party-label">From</span>
+                                <span className="settlement-party-name">{t.from}</span>
+                              </div>
+                            </div>
+                            <div className="settlement-arrow">
+                              <ArrowRight size={18} className="text-muted" />
+                            </div>
+                            <div className="settlement-party">
+                              <span className="settlement-avatar settlement-avatar--to">
+                                {nameInitials(t.to)}
+                              </span>
+                              <div className="settlement-party-text">
+                                <span className="settlement-party-label">To</span>
+                                <span className="settlement-party-name">{t.to}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="settlement-card-footer flex-between gap-3 flex-wrap">
+                            <span className="settlement-card-amount">${t.amount.toFixed(2)}</span>
+                            <label className="settlement-paid-control">
+                              <input
+                                type="checkbox"
+                                disabled={isRecording}
+                                onChange={async (e) => {
+                                  if (!e.target.checked) return;
+                                  setRecordingSettlementKey(stKey);
+                                  try {
+                                    await api.post('/settlements/', {
+                                      group_id: id,
+                                      from_name: t.from,
+                                      to_name: t.to,
+                                      amount: t.amount
+                                    });
+                                    await fetchData();
+                                  } catch (err) {
+                                    alert('Failed to record settlement');
+                                    e.target.checked = false;
+                                  } finally {
+                                    setRecordingSettlementKey(null);
+                                  }
+                                }}
+                              />
+                              {isRecording ? (
+                                <Loader2 className="animate-spin" size={16} />
+                              ) : (
+                                <span className="settlement-paid-label">Mark paid</span>
+                              )}
+                            </label>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="settlements-empty p-10 text-center">
+                <div className="settlements-empty-icon mx-auto mb-4">
+                  <CheckCircle2 size={40} strokeWidth={1.75} className="text-primary" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Everyone is settled up</h3>
+                <p className="text-muted text-small max-w-md mx-auto">
+                  No one owes anyone in this group right now. Add expenses to split new bills—settlements will show up here when balances are uneven.
+                </p>
+              </div>
+            )}
           </section>
         </div>
 
@@ -327,44 +375,6 @@ const GroupDetails = () => {
         initialData={editingExpense}
       />
 
-      {/* Simplified Settle Up Overlay */}
-      {showSettleUp && (
-        <div className="modal-overlay">
-          <div className="modal-content glass-panel animate-fade-in max-w-sm">
-            <header className="modal-header flex-between">
-              <h2 className="text-gradient">Quick Settle</h2>
-              <button type="button" onClick={() => setShowSettleUp(false)} className="close-btn" aria-label="Close"><X size={24}/></button>
-            </header>
-            <form onSubmit={handleSettleUp} className="flex-column gap-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="input-group">
-                  <label className="text-tiny uppercase text-muted font-bold block mb-2">Payer</label>
-                  <select value={settlePayer} onChange={e => setSettlePayer(e.target.value)} className="input-premium w-full text-sm" required>
-                    <option value="">Select...</option>
-                    {group.participants.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
-                  </select>
-                </div>
-                <div className="input-group">
-                  <label className="text-tiny uppercase text-muted font-bold block mb-2">Recipient</label>
-                  <select value={settleRecipient} onChange={e => setSettleRecipient(e.target.value)} className="input-premium w-full text-sm" required>
-                    <option value="">Select...</option>
-                    {group.participants.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="input-group">
-                <label className="text-tiny uppercase text-muted font-bold block mb-2">Amount</label>
-                <div className="relative">
-                  <DollarSign size={16} className="absolute left-4 top-4 text-muted" />
-                  <input type="number" step="0.01" value={settleAmount} onChange={e => setSettleAmount(e.target.value)} className="input-premium w-full pl-10" placeholder="0.00" required />
-                </div>
-              </div>
-              <button type="submit" className="btn-primary w-full py-4 mt-2">Record Settlement</button>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Group Settings Modal (Externalized) */}
       <GroupSettingsModal 
         isOpen={showSettings}
@@ -399,6 +409,218 @@ const GroupDetails = () => {
         }
 
         .stat-box h2 { letter-spacing: -0.02em; }
+
+        .settlements-section--active {
+          border-color: rgba(16, 233, 163, 0.22);
+          box-shadow: 0 0 0 1px rgba(16, 233, 163, 0.08), var(--shadow-premium);
+        }
+        .settlements-section--clear {
+          border-color: var(--card-border);
+        }
+        .settlements-active-banner {
+          background: linear-gradient(
+            135deg,
+            rgba(16, 233, 163, 0.12) 0%,
+            rgba(13, 17, 23, 0.4) 55%,
+            rgba(215, 90%, 60%, 0.06) 100%
+          );
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .settlements-active-banner-inner {
+          padding: 1.5rem 2rem;
+          align-items: flex-start;
+        }
+        .settlements-banner-icon {
+          width: 3rem;
+          height: 3rem;
+          border-radius: var(--radius-md);
+          background: rgba(16, 233, 163, 0.15);
+          border: 1px solid rgba(16, 233, 163, 0.35);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--primary);
+          flex-shrink: 0;
+        }
+        .settlements-banner-title {
+          font-size: 1.125rem;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          color: #fff;
+          margin-bottom: 0.25rem;
+        }
+        .settlements-banner-sub {
+          max-width: 36rem;
+          line-height: 1.5;
+        }
+        .settlements-summary-stack {
+          flex-shrink: 0;
+          min-width: 8rem;
+        }
+        .settlements-summary-amount {
+          font-size: 1.75rem;
+          font-weight: 900;
+          font-variant-numeric: tabular-nums;
+          color: var(--primary);
+          letter-spacing: -0.03em;
+        }
+        .settlement-grid {
+          display: grid;
+          gap: 1.25rem;
+          grid-template-columns: 1fr;
+        }
+        @media (min-width: 768px) {
+          .settlement-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (min-width: 1280px) {
+          .settlement-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        .settlement-card-enhanced {
+          background: rgba(0, 0, 0, 0.28);
+          border: 1px solid var(--card-border);
+          border-radius: var(--radius-lg);
+          padding: 1.25rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+          transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+        .settlement-card-enhanced:hover {
+          border-color: rgba(16, 233, 163, 0.25);
+          box-shadow: 0 12px 32px -20px rgba(0, 0, 0, 0.6);
+        }
+        .settlement-card-top { min-height: 1.5rem; }
+        .settlement-you-badge {
+          display: inline-block;
+          font-size: 0.65rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          padding: 0.25rem 0.55rem;
+          border-radius: 6px;
+          background: rgba(249, 115, 22, 0.15);
+          color: #fb923c;
+          border: 1px solid rgba(249, 115, 22, 0.35);
+        }
+        .settlement-you-badge--in {
+          background: rgba(16, 233, 163, 0.12);
+          color: var(--primary);
+          border-color: rgba(16, 233, 163, 0.35);
+        }
+        .settlement-you-badge--muted {
+          background: rgba(255, 255, 255, 0.05);
+          color: var(--muted);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .settlement-parties {
+          display: flex;
+          align-items: center;
+          gap: 0.65rem;
+          flex-wrap: wrap;
+        }
+        .settlement-party {
+          display: flex;
+          align-items: center;
+          gap: 0.65rem;
+          min-width: 0;
+          flex: 1;
+        }
+        .settlement-arrow {
+          flex-shrink: 0;
+          opacity: 0.65;
+        }
+        .settlement-avatar {
+          width: 2.5rem;
+          height: 2.5rem;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.75rem;
+          font-weight: 800;
+          color: #000;
+          flex-shrink: 0;
+        }
+        .settlement-avatar--from {
+          background: linear-gradient(135deg, hsl(38 92% 58%), hsl(25 88% 48%));
+        }
+        .settlement-avatar--to {
+          background: linear-gradient(135deg, hsl(160 84% 48%), hsl(160 70% 36%));
+        }
+        .settlement-party-text {
+          display: flex;
+          flex-direction: column;
+          gap: 0.1rem;
+          min-width: 0;
+        }
+        .settlement-party-label {
+          font-size: 0.65rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--muted);
+        }
+        .settlement-party-name {
+          font-weight: 700;
+          font-size: 0.95rem;
+          color: #fff;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .settlement-card-footer {
+          padding-top: 0.75rem;
+          margin-top: auto;
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
+          align-items: center;
+        }
+        .settlement-card-amount {
+          font-size: 1.5rem;
+          font-weight: 900;
+          font-variant-numeric: tabular-nums;
+          color: var(--primary);
+          letter-spacing: -0.02em;
+        }
+        .settlement-paid-control {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          cursor: pointer;
+          padding: 0.5rem 0.85rem;
+          border-radius: var(--radius-md);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.04);
+          transition: border-color 0.2s ease, background 0.2s ease;
+        }
+        .settlement-paid-control:hover {
+          border-color: rgba(16, 233, 163, 0.45);
+          background: rgba(16, 233, 163, 0.08);
+        }
+        .settlement-paid-control input {
+          width: 1.1rem;
+          height: 1.1rem;
+          accent-color: var(--primary);
+          cursor: pointer;
+        }
+        .settlement-paid-control input:disabled {
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+        .settlement-paid-label {
+          font-size: 0.8125rem;
+          font-weight: 700;
+          color: var(--foreground);
+        }
+        .settlements-empty-icon {
+          width: 4.5rem;
+          height: 4.5rem;
+          border-radius: 50%;
+          background: rgba(16, 233, 163, 0.1);
+          border: 1px solid rgba(16, 233, 163, 0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
         
         .avatar-initial { 
           width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.05); 

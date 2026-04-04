@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Save, Trash2, Users, Loader2, Search, Settings, Info, UserPlus } from 'lucide-react';
 import { api } from '../api/api';
+import { ModalPortal } from './ModalPortal';
 
 interface Participant {
   name: string;
@@ -144,6 +145,7 @@ const GroupSettingsModal = ({ isOpen, onClose, onSuccess, group, currentUserId, 
   if (!isOpen) return null;
 
   return (
+    <ModalPortal>
     <div className="modal-overlay">
       <div className="modal-content animate-fade-in">
         <header className="modal-header flex-between">
@@ -278,6 +280,7 @@ const GroupSettingsModal = ({ isOpen, onClose, onSuccess, group, currentUserId, 
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 
