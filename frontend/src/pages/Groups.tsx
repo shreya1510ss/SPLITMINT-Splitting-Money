@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Users, Search, Loader2, X, UserPlus, ArrowRight, TrendingUp, Wallet } from 'lucide-react';
+import { Plus, Users, Search, Loader2, X, UserPlus, ArrowRight, FolderPlus } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { ModalPortal } from '../components/ModalPortal';
 
 interface Participant {
   name: string;
@@ -37,6 +39,8 @@ const Groups = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+
+  useBodyScrollLock(showCreateModal);
 
   useEffect(() => {
     fetchGroups();
@@ -103,12 +107,27 @@ const Groups = () => {
   };
 
   const openCreateModal = () => {
-    setNewParticipants([{ 
-      name: user?.name || 'You', 
-      email: user?.email || '',
-      is_registered_user: true 
-    }]);
+    setNewGroupName('');
+    setParticipantName('');
+    setSearchResults([]);
+    setShowDropdown(false);
+    setNewParticipants([
+      {
+        name: user?.name || 'You',
+        email: user?.email || '',
+        is_registered_user: true,
+      },
+    ]);
     setShowCreateModal(true);
+  };
+
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    setNewGroupName('');
+    setParticipantName('');
+    setSearchResults([]);
+    setShowDropdown(false);
+    setNewParticipants([]);
   };
 
   const handleAddParticipant = (name?: string, email?: string, isRegistered = false) => {
@@ -167,9 +186,7 @@ const Groups = () => {
       };
 
       await api.post(`/groups/?creator_id=${user?.id}`, payload);
-      setShowCreateModal(false);
-      setNewGroupName('');
-      setNewParticipants([]);
+      closeCreateModal();
       fetchGroups();
     } catch (err) {
       alert('Failed to create group. Please check participants (max 4).');
@@ -249,57 +266,128 @@ const Groups = () => {
         </div>
       )}
 
-      {/* Create Group Modal */}
+      {/* Create Group Modal — portaled so it covers sidebar + full viewport */}
       {showCreateModal && (
-        <div className="modal-overlay">
-          <div className="modal-content glass-panel animate-fade-in shadow-xl">
-            <header className="modal-header flex-between mb-8">
-              <h2>New Expense Group</h2>
-              <button type="button" className="close-btn" onClick={() => setShowCreateModal(false)} aria-label="Close"><X size={24} /></button>
+        <ModalPortal>
+        <div className="modal-overlay" role="presentation" onClick={closeCreateModal}>
+          <div
+            className="modal-content modal-content--create-group glass-panel animate-fade-in shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-group-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="modal-header flex-between">
+              <div>
+                <h2 id="create-group-title" className="text-gradient">Create group</h2>
+                <p className="text-muted text-small" style={{ marginTop: '0.35rem' }}>
+                  Name your circle and invite up to three others.
+                </p>
+              </div>
+              <button type="button" className="close-btn" onClick={closeCreateModal} aria-label="Close">
+                <X size={22} />
+              </button>
             </header>
 
             <form onSubmit={handleCreateGroup} className="modal-form flex-column gap-6">
               <div className="input-group">
-                <label className="text-small text-muted mb-2 block">Group Name</label>
-                <input type="text" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder="e.g. Goa Trip" className="input-premium w-full" required />
+                <label className="text-small text-muted mb-2 block">Group name</label>
+                <div className="input-with-icon">
+                  <FolderPlus className="input-icon" size={18} />
+                  <input
+                    type="text"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder="e.g. Weekend trip, Apartment"
+                    className="input-premium input-premium-with-icon w-full"
+                    required
+                    autoFocus
+                  />
+                </div>
               </div>
 
               <div className="input-group relative">
-                <label className="text-small text-muted mb-2 block">Add Participants (Max 3 others)</label>
-                <div className="flex-center gap-2">
-                  <input type="text" value={participantName} onChange={(e) => setParticipantName(e.target.value)} placeholder="Name or Email" className="input-premium w-full" onFocus={() => searchResults.length > 0 && setShowDropdown(true)} onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddParticipant())} />
-                  <button type="button" onClick={() => handleAddParticipant()} className="icon-btn-primary"><UserPlus size={20} /></button>
+                <label className="text-small text-muted mb-2 block">Add people</label>
+                <p className="text-muted text-small" style={{ marginBottom: '0.5rem', fontSize: '0.78rem' }}>
+                  Search registered users by name, or type a name and press + to add a guest (email required).
+                </p>
+                <div className="create-group-add-row">
+                  <div className="input-with-icon flex-1">
+                    <Search className="input-icon" size={17} />
+                    <input
+                      type="text"
+                      value={participantName}
+                      onChange={(e) => setParticipantName(e.target.value)}
+                      placeholder="Search name…"
+                      className="input-premium input-premium-with-icon w-full"
+                      onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddParticipant();
+                        }
+                      }}
+                      autoComplete="off"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="create-group-icon-btn"
+                    onClick={() => handleAddParticipant()}
+                    disabled={!participantName.trim() || isSearching}
+                    aria-label="Add participant"
+                  >
+                    {isSearching ? <Loader2 className="animate-spin" size={20} /> : <UserPlus size={20} />}
+                  </button>
                 </div>
-                {showDropdown && (
-                  <div className="search-dropdown glass-panel animate-fade-in">
-                    {searchResults.map(u => (
-                      <div key={u.id} className="search-result-item flex-between" onClick={() => handleAddParticipant(u.name, u.email, true)}>
-                        <div className="flex-column">
-                          <span className="font-bold">{u.name}</span>
-                          <span className="text-xs text-muted">{u.email}</span>
+                {showDropdown && searchResults.length > 0 && (
+                  <div className="create-group-dropdown animate-fade-in">
+                    {searchResults.map((u) => (
+                      <div
+                        key={u.id}
+                        className="create-group-result"
+                        onClick={() => handleAddParticipant(u.name, u.email, true)}
+                        role="option"
+                      >
+                        <div className="flex-column gap-1" style={{ minWidth: 0 }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{u.name}</span>
+                          <span className="text-muted text-small" style={{ fontSize: '0.75rem' }}>
+                            {u.email}
+                          </span>
                         </div>
-                        <span className="badge-registered">Registered</span>
+                        <span className="badge-registered">On SplitMint</span>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
 
-              <div className="participants-list">
-                {newParticipants.map((p, i) => (
-                  <div key={i} className="participant-chip flex-between">
-                    <span>{p.name} {i === 0 && '(You)'}</span>
-                    {i !== 0 && <button type="button" onClick={() => handleRemoveParticipant(i)}><X size={14} /></button>}
-                  </div>
-                ))}
+              <div className="input-group">
+                <label className="text-small text-muted mb-2 block">In this group</label>
+                <div className="create-group-participants-box">
+                  {newParticipants.map((p, i) => (
+                    <div key={`${p.email}-${i}`} className="create-group-chip">
+                      <span>
+                        {p.name}
+                        {i === 0 && <span className="text-muted"> (you)</span>}
+                      </span>
+                      {i !== 0 && (
+                        <button type="button" onClick={() => handleRemoveParticipant(i)} aria-label={`Remove ${p.name}`}>
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <button type="submit" disabled={isCreating} className="btn-primary w-full py-4 mt-2">
-                {isCreating ? <Loader2 className="animate-spin" /> : 'Create Group'}
+              <button type="submit" disabled={isCreating} className="btn-primary w-full py-4">
+                {isCreating ? <Loader2 className="animate-spin" /> : 'Create group'}
               </button>
             </form>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       <style>{`
@@ -310,13 +398,7 @@ const Groups = () => {
         .group-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
         .text-tiny { font-size: 0.65rem; }
         .relative { position: relative; }
-        .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: rgba(15, 18, 25, 0.95); z-index: 1100; padding: 0.5rem; }
-        .search-result-item { padding: 0.75rem 1rem; cursor: pointer; border-radius: var(--radius-sm); }
-        .search-result-item:hover { background: rgba(255,255,255,0.05); }
-        .badge-registered { background: rgba(16, 233, 163, 0.1); color: var(--primary); padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
-        .participants-list { min-height: 80px; border: 1px dashed rgba(255,255,255,0.1); border-radius: var(--radius-md); padding: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
-        .participant-chip { background: rgba(16, 233, 163, 0.1); color: var(--primary); padding: 0.4rem 0.8rem; border-radius: 100px; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
-        .icon-btn-primary { width: 52px; height: 52px; background: var(--primary); border: none; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .badge-registered { background: rgba(16, 233, 163, 0.12); color: var(--primary); padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid rgba(16, 233, 163, 0.25); flex-shrink: 0; }
       `}</style>
     </div>
   );
