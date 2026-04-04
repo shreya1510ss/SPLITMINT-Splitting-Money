@@ -9,6 +9,10 @@ class SplitMode(str, Enum):
     CUSTOM = "custom"
     PERCENTAGE = "percentage"
 
+class ExpenseType(str, Enum):
+    EXPENSE = "expense"
+    SETTLEMENT = "settlement"
+
 # A sub-model to track each person's exact share of an expense
 class ExpenseSplit(BaseModel):
     participant_name: str = Field(..., description="Name of the participant involved")
@@ -23,6 +27,8 @@ class ExpenseCreate(BaseModel):
     
     payer_name: str = Field(..., description="The name of the participant who paid the bill")
     split_mode: SplitMode = Field(default=SplitMode.EQUAL)
+    type: ExpenseType = Field(default=ExpenseType.EXPENSE)
+    is_checked: bool = Field(default=False)
     
     # This list tells us exactly who is involved in this specific expense, and their shares
     splits: List[ExpenseSplit]

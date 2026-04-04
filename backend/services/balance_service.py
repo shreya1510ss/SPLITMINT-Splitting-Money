@@ -1,14 +1,8 @@
 from typing import List, Dict
 
-def calculate_group_stats(expenses: List[dict]) -> dict:
+def calculate_group_stats(expenses: List[dict], settlements: List[dict] = None) -> dict:
     """
     Computes detailed group-level stats for dashboards.
-    Returns: {
-        "net_balances": {"Alice": 25.0, ...},
-        "contributions": {"Alice": 150.0, ...},
-        "shares": {"Alice": 125.0, ...},
-        "frequency": {"Alice": 3, ...}
-    }
     """
     net_balances = {}
     contributions = {}
@@ -34,6 +28,18 @@ def calculate_group_stats(expenses: List[dict]) -> dict:
 
             shares[participant] = shares.get(participant, 0.0) + owed_share
             net_balances[participant] = net_balances.get(participant, 0.0) - owed_share
+
+    # 4. Integrate Settlements (credits that offset debts)
+    if settlements:
+        for s in settlements:
+            from_name = s.get("from_name")
+            to_name = s.get("to_name")
+            amount = s.get("amount", 0.0)
+            
+            # The person who paid getting the debt removed (balance increases)
+            net_balances[from_name] = net_balances.get(from_name, 0.0) + amount
+            # The person who received having their credit removed (balance decreases)
+            net_balances[to_name] = net_balances.get(to_name, 0.0) - amount
 
     # Rounding and cleaning up results
     return {

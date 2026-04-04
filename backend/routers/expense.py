@@ -125,3 +125,27 @@ async def update_expense(expense_id: str, expense_in: ExpenseCreate):
     # 7. Format it nicely (MongoDB uses _id, our model uses id)
     updated_expense["id"] = str(updated_expense["_id"])
     return updated_expense
+
+@router.patch("/{expense_id}/toggle-check", response_model=ExpenseOut)
+async def toggle_expense_checked(expense_id: str):
+    if not ObjectId.is_valid(expense_id):
+        raise HTTPException(status_code=400, detail="Invalid Expense ID format")
+    
+    # 1. Fetch current status
+    expense = await database.expenses.find_one({"_id": ObjectId(expense_id)})
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    
+    # 2. Toggle the boolean
+    new_status = not expense.get("is_checked", False)
+    
+    # 3. Update in DB
+    await database.expenses.update_one(
+        {"_id": ObjectId(expense_id)},
+        {"$set": {"is_checked": new_status}}
+    )
+    
+    # 4. Return updated expense
+    updated_expense = await database.expenses.find_one({"_id": ObjectId(expense_id)})
+    updated_expense["id"] = str(updated_expense["_id"])
+    return updated_expense

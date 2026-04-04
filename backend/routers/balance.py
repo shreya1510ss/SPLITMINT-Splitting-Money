@@ -22,14 +22,20 @@ async def get_group_balances(group_id: str):
     cursor = database.expenses.find({"group_id": group_id})
     expenses = await cursor.to_list(length=None)
 
-    # 3. Calculate statistics
-    stats = calculate_group_stats(expenses)
+    # 3. Fetch all settlements
+    settlements_cursor = database.settlements.find({"group_id": group_id})
+    settlements = await settlements_cursor.to_list(length=None)
+    for s in settlements:
+        s["id"] = str(s.pop("_id"))
+
+    # 4. Calculate statistics (now factoring in settlements)
+    stats = calculate_group_stats(expenses, settlements)
     net_balances = stats["net_balances"]
     
-    # 4. Simplify debts
+    # 5. Simplify debts
     transactions = simplify_debts(net_balances)
 
-    # 5. Calculate total group spending
+    # 6. Calculate total group spending
     total_spent = sum(exp.get("amount", 0.0) for exp in expenses)
 
     return {
@@ -39,5 +45,6 @@ async def get_group_balances(group_id: str):
         "contributions": stats["contributions"],
         "shares": stats["shares"],
         "frequency": stats["frequency"],
-        "participants": group.get("participants", [])
+        "participants": group.get("participants", []),
+        "settlements": settlements
     }

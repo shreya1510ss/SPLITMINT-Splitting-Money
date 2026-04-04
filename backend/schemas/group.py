@@ -3,10 +3,8 @@ from typing import List, Optional
 
 class Participant(BaseModel):
     name: str = Field(..., min_length=1)
+    email: str = Field(default="", description="Mandatory email to identify and link participants to their accounts")
     color: Optional[str] = Field(None, description="Optional hex color code usually for UI avatars")
-    
-    # Keeping it simple: instead of linking complex User IDs for everyone,
-    # we just track if they are a registered user or just a "guest" participant added by the creator.
     is_registered_user: bool = Field(default=False)
 
 class GroupCreate(BaseModel):
@@ -22,3 +20,4 @@ class GroupOut(GroupCreate):
 
 class GroupUpdate(BaseModel):
     name: str = Field(..., min_length=2, description="The new name for the expense group")
+    participants: Optional[List[Participant]] = Field(None, description="Optional new list of participants")
