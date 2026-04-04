@@ -151,7 +151,7 @@ const GroupSettingsModal = ({ isOpen, onClose, onSuccess, group, currentUserId, 
             <h2 className="text-gradient">Group Hub</h2>
             <p className="text-muted text-small">Manage branding and members</p>
           </div>
-          <button onClick={onClose} className="close-btn"><X size={20}/></button>
+          <button type="button" onClick={onClose} className="close-btn" aria-label="Close"><X size={20}/></button>
         </header>
 
         <form onSubmit={handleSave} className="modal-form">

@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, DollarSign, Calendar, Users, FileText, PieChart, LayoutGrid } from 'lucide-react';
+import { X, Loader2, DollarSign, Calendar, Users, FileText, PieChart, LayoutGrid, Scale } from 'lucide-react';
+import clsx from 'clsx';
 import { api } from '../api/api';
+
+function participantInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.trim().slice(0, 2).toUpperCase() || '?';
+}
 
 interface Participant {
   name: string;
@@ -159,17 +168,27 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
     setSplits([]);
   };
 
+  const amountNum = parseFloat(amount) || 0;
+  const pctSum = splits.reduce((acc, s) => acc + (Number(s.percentage) || 0), 0);
+  const customSum = splits.reduce((acc, s) => acc + (Number(s.owed_share) || 0), 0);
+  const equalShare = splits.length > 0 && amountNum > 0 ? amountNum / splits.length : 0;
+  const pctOk = Math.abs(pctSum - 100) <= 0.1;
+  const customOk = Math.abs(customSum - amountNum) <= 0.01;
+  const pctBarPct = Math.min((pctSum / 100) * 100, 100);
+  const customBarPct =
+    amountNum > 0 ? Math.min((customSum / amountNum) * 100, 100) : 0;
+
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay flex-center">
-      <div className="modal-content glass-panel animate-fade-in shadow-xl">
+    <div className="modal-overlay">
+      <div className="modal-content modal-content--expense glass-panel animate-fade-in shadow-xl">
         <header className="modal-header flex-between mb-8">
           <div>
             <h2 className="text-gradient">{initialData ? 'Edit Expense' : 'Add New Expense'}</h2>
             <p className="text-muted text-small">Split a bill with your group</p>
           </div>
-          <button className="close-btn" onClick={onClose}><X size={24} /></button>
+          <button type="button" className="close-btn" onClick={onClose} aria-label="Close"><X size={24} /></button>
         </header>
 
         <form onSubmit={handleSubmit} className="modal-form flex-column gap-6">
@@ -258,69 +277,180 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
             </div>
           </div>
 
-          {/* Split Mode Tabs */}
-          <div className="split-mode-container">
-            <label className="text-small text-muted mb-2 block">Split Mode</label>
-            <div className="tabs-premium">
-              <button 
-                type="button" 
-                className={splitMode === 'equal' ? 'active' : ''} 
+          <div className="split-section">
+            <div className="split-section-label">
+              <span>Divide the bill</span>
+              <Scale size={14} className="text-muted" aria-hidden />
+            </div>
+
+            <div className="split-mode-pills" role="tablist" aria-label="Split mode">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={splitMode === 'equal'}
+                className={clsx(splitMode === 'equal' && 'active')}
                 onClick={() => setSplitMode('equal')}
               >
-                <LayoutGrid size={16} /> Equal
+                <LayoutGrid size={16} strokeWidth={2.25} />
+                Equal
               </button>
-              <button 
-                type="button" 
-                className={splitMode === 'percentage' ? 'active' : ''} 
+              <button
+                type="button"
+                role="tab"
+                aria-selected={splitMode === 'percentage'}
+                className={clsx(splitMode === 'percentage' && 'active')}
                 onClick={() => setSplitMode('percentage')}
               >
-                <PieChart size={16} /> %
+                <PieChart size={16} strokeWidth={2.25} />
+                Percent
               </button>
-              <button 
-                type="button" 
-                className={splitMode === 'custom' ? 'active' : ''} 
+              <button
+                type="button"
+                role="tab"
+                aria-selected={splitMode === 'custom'}
+                className={clsx(splitMode === 'custom' && 'active')}
                 onClick={() => setSplitMode('custom')}
               >
-                <DollarSign size={16} /> Custom
+                <DollarSign size={16} strokeWidth={2.25} />
+                Custom
               </button>
             </div>
-          </div>
 
-          {/* Detailed Splits Inputs */}
-          {splitMode !== 'equal' && (
-            <div className="splits-detail-grid glass-panel p-4">
-              {splits.map((s, i) => (
-                <div key={i} className="flex-between py-2 border-b border-white-05 last:border-0">
-                  <span className="text-small">{s.participant_name}</span>
-                  <div className="flex-center gap-2">
-                    {splitMode === 'percentage' ? (
-                      <div className="input-mini-wrapper">
-                        <input 
-                          type="number" 
-                          step="0.1"
-                          value={s.percentage || ''}
-                          onChange={(e) => handleSplitValueChange(i, 'percentage', e.target.value)}
-                          className="input-mini"
-                        />
-                        <span className="text-muted text-xs">%</span>
+            {splitMode === 'equal' && splits.length > 0 && (
+              <>
+                <div className="split-participant-list">
+                  {splits.map((s, i) => (
+                    <div key={s.participant_name} className="split-participant-row">
+                      <div className="split-person">
+                        <div className={clsx('split-avatar', `tone-${i % 5}`)}>
+                          {participantInitials(s.participant_name)}
+                        </div>
+                        <span className="split-person-name">{s.participant_name}</span>
                       </div>
-                    ) : (
-                      <div className="input-mini-wrapper">
-                        <span className="text-muted text-xs">$</span>
-                        <input 
-                          type="number" 
-                          step="0.01"
-                          value={s.owed_share || ''}
-                          onChange={(e) => handleSplitValueChange(i, 'owed_share', e.target.value)}
-                          className="input-mini"
-                        />
-                      </div>
-                    )}
-                  </div>
+                      <span className="split-equal-amount">
+                        {amountNum > 0
+                          ? `$${equalShare.toFixed(2)}`
+                          : '—'}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+                <p className="split-hint">
+                  Each person’s share updates from the total amount above. Everyone is charged the same split.
+                </p>
+              </>
+            )}
+
+            {splitMode === 'percentage' && splits.length > 0 && (
+              <>
+                <div className="split-participant-list">
+                  {splits.map((s, i) => (
+                    <div key={s.participant_name} className="split-participant-row">
+                      <div className="split-person">
+                        <div className={clsx('split-avatar', `tone-${i % 5}`)}>
+                          {participantInitials(s.participant_name)}
+                        </div>
+                        <span className="split-person-name">{s.participant_name}</span>
+                      </div>
+                      <div className="split-field">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min={0}
+                          max={100}
+                          value={s.percentage === 0 || s.percentage ? String(s.percentage) : ''}
+                          onChange={(e) => handleSplitValueChange(i, 'percentage', e.target.value)}
+                          placeholder="0"
+                          aria-label={`Percentage for ${s.participant_name}`}
+                        />
+                        <span className="split-field-prefix">%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="split-summary">
+                  <div className="split-summary-text">
+                    <span>Assigned</span>
+                    <strong>
+                      {pctSum.toFixed(1)}% <span className="text-muted"> / 100%</span>
+                    </strong>
+                  </div>
+                  <div className="split-summary-track" aria-hidden>
+                    <div
+                      className={clsx(
+                        'split-summary-fill',
+                        !pctOk && pctSum > 100 && 'is-error',
+                        !pctOk && pctSum <= 100 && 'is-warning'
+                      )}
+                      style={{ width: `${pctBarPct}%` }}
+                    />
+                  </div>
+                  <p className="split-hint">
+                    {pctOk
+                      ? 'Percentages match — you’re good to save.'
+                      : 'Percentages must add up to exactly 100% before you can save.'}
+                  </p>
+                </div>
+              </>
+            )}
+
+            {splitMode === 'custom' && splits.length > 0 && (
+              <>
+                <div className="split-participant-list">
+                  {splits.map((s, i) => (
+                    <div key={s.participant_name} className="split-participant-row">
+                      <div className="split-person">
+                        <div className={clsx('split-avatar', `tone-${i % 5}`)}>
+                          {participantInitials(s.participant_name)}
+                        </div>
+                        <span className="split-person-name">{s.participant_name}</span>
+                      </div>
+                      <div className="split-field">
+                        <span className="split-field-prefix">$</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={s.owed_share === 0 || s.owed_share ? String(s.owed_share) : ''}
+                          onChange={(e) => handleSplitValueChange(i, 'owed_share', e.target.value)}
+                          placeholder="0.00"
+                          aria-label={`Amount owed for ${s.participant_name}`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="split-summary">
+                  <div className="split-summary-text">
+                    <span>Subtotal</span>
+                    <strong>
+                      ${customSum.toFixed(2)}{' '}
+                      <span className="text-muted">
+                        / ${amountNum.toFixed(2)}
+                      </span>
+                    </strong>
+                  </div>
+                  <div className="split-summary-track" aria-hidden>
+                    <div
+                      className={clsx(
+                        'split-summary-fill',
+                        !customOk && customSum > amountNum && amountNum > 0 && 'is-error',
+                        !customOk && customSum <= amountNum && amountNum > 0 && 'is-warning'
+                      )}
+                      style={{ width: `${customBarPct}%` }}
+                    />
+                  </div>
+                  <p className="split-hint">
+                    {amountNum <= 0
+                      ? 'Enter an amount above, then assign each person’s share so the rows sum to that total.'
+                      : customOk
+                        ? 'Shares match the bill total — ready to save.'
+                        : 'Each person’s amount should add up to the expense total.'}
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
 
           <button type="submit" disabled={isSubmitting || !selectedGroupId} className="btn-primary w-full py-4 mt-4">
             {isSubmitting ? <Loader2 className="animate-spin" /> : (initialData ? 'Update Expense' : 'Add Expense')}

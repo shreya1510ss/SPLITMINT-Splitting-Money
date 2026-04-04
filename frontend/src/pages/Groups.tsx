@@ -251,11 +251,11 @@ const Groups = () => {
 
       {/* Create Group Modal */}
       {showCreateModal && (
-        <div className="modal-overlay flex-center">
+        <div className="modal-overlay">
           <div className="modal-content glass-panel animate-fade-in shadow-xl">
             <header className="modal-header flex-between mb-8">
               <h2>New Expense Group</h2>
-              <button className="close-btn" onClick={() => setShowCreateModal(false)}><X size={24} /></button>
+              <button type="button" className="close-btn" onClick={() => setShowCreateModal(false)} aria-label="Close"><X size={24} /></button>
             </header>
 
             <form onSubmit={handleCreateGroup} className="modal-form flex-column gap-6">
@@ -309,8 +309,6 @@ const Groups = () => {
         .group-card { min-height: 180px; padding: 1.5rem; }
         .group-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
         .text-tiny { font-size: 0.65rem; }
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; padding: 1.5rem; }
-        .modal-content { width: 100%; max-width: 480px; padding: 2.5rem; }
         .relative { position: relative; }
         .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: rgba(15, 18, 25, 0.95); z-index: 1100; padding: 0.5rem; }
         .search-result-item { padding: 0.75rem 1rem; cursor: pointer; border-radius: var(--radius-sm); }

@@ -329,11 +329,11 @@ const GroupDetails = () => {
 
       {/* Simplified Settle Up Overlay */}
       {showSettleUp && (
-        <div className="modal-overlay flex-center">
+        <div className="modal-overlay">
           <div className="modal-content glass-panel animate-fade-in max-w-sm">
-            <header className="flex-between mb-8">
+            <header className="modal-header flex-between">
               <h2 className="text-gradient">Quick Settle</h2>
-              <button onClick={() => setShowSettleUp(false)} className="close-btn"><X size={24}/></button>
+              <button type="button" onClick={() => setShowSettleUp(false)} className="close-btn" aria-label="Close"><X size={24}/></button>
             </header>
             <form onSubmit={handleSettleUp} className="flex-column gap-6">
               <div className="grid grid-cols-2 gap-4">

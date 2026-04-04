@@ -193,24 +193,76 @@ h1, h2, h3, h4 {
 
 /* Global Modal System Enhancement */
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(8, 10, 15, 0.85);
-  backdrop-filter: blur(12px); z-index: 2000; padding: 1.5rem;
-  display: flex; align-items: center; justify-content: center;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: max(1rem, env(safe-area-inset-top, 0px)) 1.25rem
+    max(1rem, env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: rgba(8, 10, 15, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .modal-content {
-  width: 100%; max-width: 520px; padding: 2.5rem;
+  width: 100%;
+  max-width: 520px;
+  margin: 1rem auto;
+  padding: 2.5rem;
   background: var(--glass);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-premium);
   position: relative;
+  flex-shrink: 0;
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
+/* Header scrolls with the modal — no sticky, so the X stays in the same sheet as the form */
 .modal-header {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   padding-bottom: 1.5rem;
   margin-bottom: 2rem;
+}
+
+/* Dismiss control — was unstyled, so the X could be invisible / untappable */
+.close-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.close-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--primary);
 }
 
 .modal-form {
@@ -276,5 +328,253 @@ select.input-premium {
 @media (max-width: 640px) {
   .flex-grid { flex-direction: column; }
   .modal-content { padding: 1.5rem; }
+}
+
+/* --------------------------------------------------------------------------
+   Add expense — split & divide money
+   -------------------------------------------------------------------------- */
+.modal-content--expense {
+  max-width: 560px;
+}
+
+.split-section {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  padding: 1.25rem;
+}
+
+.split-section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.split-section-label span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.split-mode-pills {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+}
+
+.split-mode-pills button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.65rem;
+  padding: 0.5rem 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+.split-mode-pills button:hover:not(.active) {
+  color: var(--foreground);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.split-mode-pills button.active {
+  color: #000;
+  background: var(--primary);
+  box-shadow: 0 2px 14px var(--primary-glow);
+}
+
+.split-participant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.split-participant-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+}
+
+.split-participant-row:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.split-participant-row:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-glow);
+}
+
+.split-person {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.split-avatar {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #000;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.split-avatar.tone-0 {
+  background: linear-gradient(135deg, hsl(160 84% 48%), hsl(160 70% 36%));
+}
+.split-avatar.tone-1 {
+  background: linear-gradient(135deg, hsl(215 90% 62%), hsl(230 80% 52%));
+}
+.split-avatar.tone-2 {
+  background: linear-gradient(135deg, hsl(280 70% 58%), hsl(300 60% 48%));
+}
+.split-avatar.tone-3 {
+  background: linear-gradient(135deg, hsl(35 92% 58%), hsl(25 88% 50%));
+}
+.split-avatar.tone-4 {
+  background: linear-gradient(135deg, hsl(340 78% 58%), hsl(350 72% 48%));
+}
+
+.split-person-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.split-equal-amount {
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.split-field {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.split-field-prefix {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.split-field input {
+  width: 5.75rem;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-family: inherit;
+  transition: var(--transition);
+}
+
+.split-field input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-glow);
+}
+
+.split-field input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.split-summary {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.split-summary-text {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.split-summary-text strong {
+  color: var(--foreground);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.split-summary-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin-top: 0.65rem;
+}
+
+.split-summary-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.split-summary-fill.is-warning {
+  background: hsl(38 92% 52%);
+}
+
+.split-summary-fill.is-error {
+  background: var(--error);
+}
+
+.split-hint {
+  margin-top: 0.65rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
