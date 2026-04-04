@@ -66,6 +66,15 @@ h1, h2, h3, h4 {
 
 .text-muted { color: var(--muted); }
 .text-small { font-size: 0.875rem; }
+.text-tiny { font-size: 0.75rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+
+.font-bold { font-weight: 700; }
+.font-black { font-weight: 900; }
+.uppercase { text-transform: uppercase; }
+.tracking-tighter { letter-spacing: -0.05em; }
+.tracking-widest { letter-spacing: 0.1em; }
 
 /* Layout & Grid System (Vanilla replacements for Tailwind) */
 .flex-center { display: flex; align-items: center; justify-content: center; }

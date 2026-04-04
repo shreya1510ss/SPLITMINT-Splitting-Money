@@ -161,7 +161,7 @@ const GroupDetails = () => {
         <div className="stat-box text-center">
           <TrendingUp className="text-primary mb-2 mx-auto" size={24} />
           <span className="text-tiny uppercase text-muted font-bold tracking-widest">Total Group Spending</span>
-          <h2 className="text-4xl font-bold">${balances.total_spent.toFixed(2)}</h2>
+          <h2 className="text-4xl font-bold">{balances.total_spent.toFixed(2)}</h2>
         </div>
       </div>
 
@@ -192,7 +192,7 @@ const GroupDetails = () => {
                       <span className="settlements-summary-label text-tiny uppercase text-muted font-bold tracking-widest">
                         Total to move
                       </span>
-                      <span className="settlements-summary-amount">${settlementsTotalOwed.toFixed(2)}</span>
+                      <span className="settlements-summary-amount">{settlementsTotalOwed.toFixed(2)}</span>
                       <span className="text-muted text-tiny">
                         {settlementTx.length} payment{settlementTx.length === 1 ? '' : 's'}
                       </span>
@@ -229,9 +229,6 @@ const GroupDetails = () => {
                                 <span className="settlement-party-name">{t.from}</span>
                               </div>
                             </div>
-                            <div className="settlement-arrow">
-                              <ArrowRight size={18} className="text-muted" />
-                            </div>
                             <div className="settlement-party">
                               <span className="settlement-avatar settlement-avatar--to">
                                 {nameInitials(t.to)}
@@ -243,7 +240,7 @@ const GroupDetails = () => {
                             </div>
                           </div>
                           <div className="settlement-card-footer flex-between gap-3 flex-wrap">
-                            <span className="settlement-card-amount">${t.amount.toFixed(2)}</span>
+                            <span className="settlement-card-amount">{t.amount.toFixed(2)}</span>
                             <label className="settlement-paid-control">
                               <input
                                 type="checkbox"
@@ -337,7 +334,7 @@ const GroupDetails = () => {
                         <td className="text-muted text-sm">{exp.payer_name}</td>
                         <td className="text-right font-bold text-white">
                           <span className={isSettlement ? 'text-primary' : ''}>
-                            {isSettlement ? '→ ' : ''}${exp.amount.toFixed(2)}
+                            {isSettlement ? '→ ' : ''}{exp.amount.toFixed(2)}
                           </span>
                         </td>
                         <td>
@@ -479,10 +476,10 @@ const GroupDetails = () => {
           background: rgba(0, 0, 0, 0.28);
           border: 1px solid var(--card-border);
           border-radius: var(--radius-lg);
-          padding: 1.25rem;
+          padding: 1.5rem 1.25rem;
           display: flex;
           flex-direction: column;
-          gap: 1rem;
+          gap: 1.25rem;
           transition: border-color 0.25s ease, box-shadow 0.25s ease;
         }
         .settlement-card-enhanced:hover {
@@ -514,14 +511,25 @@ const GroupDetails = () => {
         }
         .settlement-parties {
           display: flex;
-          align-items: center;
-          gap: 0.65rem;
-          flex-wrap: wrap;
+          flex-direction: column;
+          gap: 0.85rem;
+          position: relative;
+        }
+        .settlement-parties::before {
+          content: '↓';
+          position: absolute;
+          left: 1.25rem;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          font-size: 1rem;
+          color: var(--primary);
+          opacity: 0.3;
+          z-index: 1;
         }
         .settlement-party {
           display: flex;
           align-items: center;
-          gap: 0.65rem;
+          gap: 0.85rem;
           min-width: 0;
           flex: 1;
         }
@@ -550,23 +558,23 @@ const GroupDetails = () => {
         .settlement-party-text {
           display: flex;
           flex-direction: column;
-          gap: 0.1rem;
+          gap: 0;
           min-width: 0;
+          flex: 1;
+          z-index: 2;
         }
         .settlement-party-label {
-          font-size: 0.65rem;
-          font-weight: 700;
+          font-size: 0.6rem;
+          font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 0.08em;
+          letter-spacing: 0.05em;
           color: var(--muted);
+          margin-bottom: -0.1rem;
         }
         .settlement-party-name {
           font-weight: 700;
           font-size: 0.95rem;
           color: #fff;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
         }
         .settlement-card-footer {
           padding-top: 0.75rem;

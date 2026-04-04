@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, DollarSign, Calendar, Users, FileText, PieChart, LayoutGrid, Scale } from 'lucide-react';
+import { X, Loader2, Calendar, Users, FileText, PieChart, LayoutGrid, Scale } from 'lucide-react';
 import clsx from 'clsx';
 import { api } from '../api/api';
 import { ModalPortal } from './ModalPortal';
@@ -119,7 +119,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
     } else if (splitMode === 'custom') {
       const sumAmount = splits.reduce((acc, s) => acc + (s.owed_share || 0), 0);
       if (Math.abs(sumAmount - total) > 0.01) {
-        alert(`Custom amounts must sum to the total amount ($${total})`);
+        alert(`Custom amounts must sum to the total amount (${total})`);
         return false;
       }
     }
@@ -233,17 +233,17 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
 
           <div className="flex-grid gap-4">
             <div className="input-group flex-1">
-              <label className="text-small text-muted mb-2 block">Amount ($)</label>
+              <label className="text-small text-muted mb-2 block">Amount</label>
               <div className="input-with-icon">
-                <DollarSign className="input-icon" size={18} />
                 <input 
                   type="number" 
-                  step="0.01"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="input-premium input-premium-with-icon w-full"
+                  className="input-premium w-full"
                   required
+                  min="0"
+                  step="0.01"
                 />
               </div>
             </div>
@@ -313,7 +313,6 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
                 className={clsx(splitMode === 'custom' && 'active')}
                 onClick={() => setSplitMode('custom')}
               >
-                <DollarSign size={16} strokeWidth={2.25} />
                 Custom
               </button>
             </div>
@@ -331,7 +330,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
                       </div>
                       <span className="split-equal-amount">
                         {amountNum > 0
-                          ? `$${equalShare.toFixed(2)}`
+                          ? `${equalShare.toFixed(2)}`
                           : '—'}
                       </span>
                     </div>
@@ -408,7 +407,6 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
                         <span className="split-person-name">{s.participant_name}</span>
                       </div>
                       <div className="split-field">
-                        <span className="split-field-prefix">$</span>
                         <input
                           type="number"
                           step="0.01"
@@ -426,9 +424,9 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
                   <div className="split-summary-text">
                     <span>Subtotal</span>
                     <strong>
-                      ${customSum.toFixed(2)}{' '}
-                      <span className="text-muted">
-                        / ${amountNum.toFixed(2)}
+                      {customSum.toFixed(2)}{' '}
+                      <span className="text-tiny opacity-50">
+                        / {amountNum.toFixed(2)}
                       </span>
                     </strong>
                   </div>

@@ -48,9 +48,9 @@ const Dashboard = () => {
   };
 
   const summary = [
-    { label: 'Total Balance', value: `$${totalBalance.toFixed(2)}`, icon: Wallet, color: totalBalance >= 0 ? 'var(--primary)' : '#f97316' },
-    { label: 'You Owe', value: `$${youOwe.toFixed(2)}`, icon: ArrowDownRight, color: '#f97316' },
-    { label: 'You are Owed', value: `$${youAreOwed.toFixed(2)}`, icon: ArrowUpRight, color: 'var(--primary)' },
+    { label: 'Total Balance', value: `${totalBalance.toFixed(2)}`, icon: Wallet, color: totalBalance >= 0 ? 'var(--primary)' : '#f97316' },
+    { label: 'You Owe', value: `${youOwe.toFixed(2)}`, icon: ArrowDownRight, color: '#f97316' },
+    { label: 'You are Owed', value: `${youAreOwed.toFixed(2)}`, icon: ArrowUpRight, color: 'var(--primary)' },
   ];
 
   return (
