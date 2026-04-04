@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const viteApiUrl = import.meta.env.VITE_API_URL;
+const BASE_URL = (viteApiUrl ? viteApiUrl.replace(/\/$/, '') : '') + '/api';
 
 let jwtToken = localStorage.getItem('splitmint_token') || '';
 
