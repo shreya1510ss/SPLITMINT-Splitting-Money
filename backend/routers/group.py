@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from bson import ObjectId
 from database.mongo import database
 from schemas.group import GroupCreate, GroupOut, Participant, GroupUpdate
-from typing import List
+from typing import List, Optional
 
 router = APIRouter(prefix="/api/groups", tags=["groups"])
 
@@ -35,20 +35,53 @@ async def create_group(group: GroupCreate, creator_id: str):
         "creator_id": created_group["creator_id"]
     }
 
-# =============================================================
-# 🛑 TODO EXERCISES FOR YOU:
-# =============================================================
-# Try building these two endpoints yourself!
+# -------------------------------------------------------------
+# 5. GET ALL GROUPS
+# -------------------------------------------------------------
+@router.get("/", response_model=List[GroupOut])
+async def get_all_groups(user_id: Optional[str] = None, user_email: Optional[str] = None):
+    """
+    Fetches groups for a user. 
+    It returns groups created by the user OR where the user is a participant.
+    """
+    query = {}
+    
+    if user_id and user_email:
+        # Match groups where user is creator OR user is in the participants list by email
+        query = {
+            "$or": [
+                {"creator_id": user_id},
+                {"participants.email": user_email}
+            ]
+        }
+    elif user_id:
+        query["creator_id"] = user_id
+    elif user_email:
+        query["participants.email"] = user_email
+        
+    cursor = database.groups.find(query)
+    groups = await cursor.to_list(length=100)
+    
+    # Format for frontend
+    for group in groups:
+        group["id"] = str(group["_id"])
+        
+    return groups
 
-# @router.get("/{group_id}")
-# async def get_group(group_id: str):
-#     # Hint: Use `await database.groups.find_one(...)`
-#     pass
-
-# @router.delete("/{group_id}")
-# async def delete_group(group_id: str):
-#     # Hint: Use `await database.groups.delete_one(...)`
-#     pass
+# -------------------------------------------------------------
+# 6. GET SINGLE GROUP
+# -------------------------------------------------------------
+@router.get("/{group_id}", response_model=GroupOut)
+async def get_group(group_id: str):
+    if not ObjectId.is_valid(group_id):
+        raise HTTPException(status_code=400, detail="Invalid Group ID format")
+        
+    group = await database.groups.find_one({"_id": ObjectId(group_id)})
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+        
+    group["id"] = str(group["_id"])
+    return group
 
 @router.delete("/{group_id}")
 async def delete_group(group_id: str):
@@ -85,6 +118,30 @@ async def update_group(group_id: str, group_update: GroupUpdate):
         raise HTTPException(status_code=404, detail="Group not found")
         
     # 2. Return the freshly updated group
+    updated_group = await database.groups.find_one({"_id": ObjectId(group_id)})
+    updated_group["id"] = str(updated_group["_id"])
+    return updated_group
+
+@router.put("/{group_id}", response_model=GroupOut)
+async def fully_update_group(group_id: str, group_update: GroupUpdate):
+    """
+    Updates both name and participants list for a group in a single transaction.
+    """
+    if not ObjectId.is_valid(group_id):
+        raise HTTPException(status_code=400, detail="Invalid Group ID format")
+    
+    update_data = {"name": group_update.name}
+    if group_update.participants is not None:
+        update_data["participants"] = [p.model_dump() for p in group_update.participants]
+        
+    result = await database.groups.update_one(
+        {"_id": ObjectId(group_id)},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Group not found")
+        
     updated_group = await database.groups.find_one({"_id": ObjectId(group_id)})
     updated_group["id"] = str(updated_group["_id"])
     return updated_group

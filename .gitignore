@@ -1,8 +1,30 @@
-# Environments
+# --- Backend (Python/FastAPI) ---
 venv/
 .env
-
-# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+backend/.env
+backend/venv/
+backend/__pycache__/
+
+# --- Frontend (React/Vite/NPM) ---
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# --- Logs & OS ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.local

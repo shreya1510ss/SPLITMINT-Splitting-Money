@@ -28,17 +28,17 @@ You have opted for an **API-First Strategy**! We will build and test the entire 
 - [x] **Task 7: Splitting Core Logic**
   - [x] Write backend math logic for equal, custom, and strict percentage splits
   - *📖 Learning:* Handling monetary floating-point precision logic safely.
-- [ ] **Task 8: Expense CRUD Endpoints**
-  - [ ] Create `/api/expenses` endpoints
+- [x] **Task 8: Expense CRUD Endpoints**
+  - [x] Create `/api/expenses` endpoints
 
 ---
 
 ## Phase 4: The Balance Engine Core
-- [ ] **Task 9: Net Balance Calculation**
-  - [ ] Compute positive and negative net balances for each person in a group
+- [x] **Task 9: Net Balance Calculation**
+  - [x] Compute positive and negative net balances for each person in a group
   - *📖 Learning:* Aggregating complex data logic.
-- [ ] **Task 10: Debt Simplification Algorithm**
-  - [ ] Implement greedy matching algorithm (who pays whom) to minimize total transactions
+- [x] **Task 10: Debt Simplification Algorithm**
+  - [x] Implement greedy matching algorithm (who pays whom) to minimize total transactions
   - *📖 Learning:* Cash flow optimization algorithms (Graph routing).
 
 ---
