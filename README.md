@@ -1,5 +1,8 @@
 # 🌿 SplitMint - Smart Group Expense Management
 
+> [!IMPORTANT]
+> **[My thoughts and approach to building this app (SUBMISSION.md)](./SUBMISSION.md)** — A personal breakdown of the project's implementation, technical decisions, and trade-offs.
+
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
@@ -28,7 +31,7 @@
 ### 🧠 MintSense AI (Gemini Powered)
 - **Natural Language Extraction**: Just type "Paid 500 for pizza at Leo's with Rahul and Simran" and let AI handle the rest.
 - **Group Summaries**: Get AI-generated insights into your group's spending habits.
-- **Settlement Suggestions**: Efficient paths to settle debts with minimum transactions.
+
 
 ### 📊 Smart Dashboard
 - Clear overview of what you owe and what is owed to you.
