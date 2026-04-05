@@ -12,7 +12,9 @@ import {
   Settings,
   ArrowRight,
   HandCoins,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  FileText
 } from 'lucide-react';
 import AddExpenseModal from '../components/AddExpenseModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
@@ -67,6 +69,10 @@ const GroupDetails = () => {
   const [editingExpense, setEditingExpense] = useState<any>(null);
   const [recordingSettlementKey, setRecordingSettlementKey] = useState<string | null>(null);
 
+  // MintSense Summary State
+  const [aiSummary, setAiSummary] = useState<any>(null);
+  const [isAiSummaryLoading, setIsAiSummaryLoading] = useState(false);
+
   useBodyScrollLock(showAddExpense || showSettings);
 
   useEffect(() => {
@@ -90,6 +96,19 @@ const GroupDetails = () => {
       console.error('Failed to fetch group details:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateAiSummary = async () => {
+    if (!id) return;
+    setIsAiSummaryLoading(true);
+    try {
+      const result = await api.get(`/ai/group-summary/${id}`);
+      setAiSummary(result);
+    } catch (err: any) {
+      console.error('Failed to generate summary:', err);
+    } finally {
+      setIsAiSummaryLoading(false);
     }
   };
 
@@ -157,11 +176,48 @@ const GroupDetails = () => {
       </header>
 
       {/* Stats Summary Panel */}
-      <div className="stats-display card-premium flex-center p-8 mb-10">
-        <div className="stat-box text-center">
-          <TrendingUp className="text-primary mb-2 mx-auto" size={24} />
-          <span className="text-tiny uppercase text-muted font-bold tracking-widest">Total Group Spending</span>
-          <h2 className="text-4xl font-bold">{balances.total_spent.toFixed(2)}</h2>
+      <div className="stats-display flex flex-col gap-6 mb-10">
+        <div className="card-premium flex-center p-8">
+          <div className="stat-box text-center">
+            <TrendingUp className="text-primary mb-2 mx-auto" size={24} />
+            <span className="text-tiny uppercase text-muted font-bold tracking-widest">Total Group Spending</span>
+            <h2 className="text-4xl font-bold">{balances.total_spent.toFixed(2)}</h2>
+          </div>
+        </div>
+
+        {/* MintSense Group Summary */}
+        <div className="card-premium p-6 border-primary/20 bg-primary/5">
+          <div className="flex-between mb-4">
+            <div className="flex-center gap-2 text-primary">
+              <Sparkles size={20} />
+              <h3 className="font-bold uppercase tracking-wider">MintSense Insights</h3>
+            </div>
+            <button 
+              className="btn-secondary py-1 px-4 text-small flex-center gap-2"
+              onClick={generateAiSummary}
+              disabled={isAiSummaryLoading}
+            >
+              {isAiSummaryLoading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+              <span>{aiSummary ? 'Refresh Summary' : 'Generate Summary'}</span>
+            </button>
+          </div>
+
+          {aiSummary ? (
+            <div className="animate-fade-in">
+              <p className="text-muted leading-relaxed mb-4">{aiSummary.summary}</p>
+              {aiSummary.top_spender && (
+                <div className="flex-center justify-start gap-2">
+                  <span className="badge-premium bg-primary/10 text-primary border-primary/20">
+                    🏆 Top Spender: {aiSummary.top_spender}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-muted italic text-small">
+              Click "Generate Summary" to get AI-powered insights about your group's spending habits.
+            </div>
+          )}
         </div>
       </div>
 
