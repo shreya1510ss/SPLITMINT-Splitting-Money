@@ -1,31 +1,32 @@
 const viteApiUrl = import.meta.env.VITE_API_URL;
 
-// 1. Remove trailing slash if present
-let baseUrl = viteApiUrl ? viteApiUrl.replace(/\/$/, '') : '';
+// Simple and robust URL logic: ensure it starts with the URL and ends with /api
+const getBaseUrl = () => {
+  if (!viteApiUrl) return '/api';
+  const cleanUrl = viteApiUrl.replace(/\/$/, '');
+  return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
+};
 
-// 2. Ensure /api suffix is present in production
-if (baseUrl && !baseUrl.endsWith('/api')) {
-  baseUrl = `${baseUrl}/api`;
-} else if (!baseUrl) {
-  // 3. Fallback for local development
-  baseUrl = '/api';
-}
-
-export const BASE_URL = baseUrl;
-console.log('Final API URL being used:', BASE_URL);
+export const BASE_URL = getBaseUrl();
+console.log('Production API URL:', BASE_URL);
 
 let jwtToken = localStorage.getItem('splitmint_token') || '';
 
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
-    let errorMessage = `API Error: ${response.statusText}`;
+    let errorMessage = 'An error occurred';
     try {
       const errorData = await response.json();
       if (errorData && errorData.detail) {
-        errorMessage = errorData.detail;
+        // Handle both string and array details from FastAPI
+        if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
+        } else {
+          errorMessage = errorData.detail;
+        }
       }
     } catch (e) {
-      // Fallback
+      errorMessage = `API Error: ${response.statusText}`;
     }
     throw new Error(errorMessage);
   }

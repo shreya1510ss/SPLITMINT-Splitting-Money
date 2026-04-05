@@ -22,12 +22,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 # We allow all origins in development and specific ones in production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://splitmint-splitting-money.vercel.app",
-        "http://localhost:3000",
-        "http://localhost:5173",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
