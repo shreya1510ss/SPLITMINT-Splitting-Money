@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import traceback
-from routers import auth, group, expense, balance, settlement
+from routers import auth, group, expense, balance, settlement, ai
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="SplitMint API")
@@ -33,6 +33,7 @@ app.include_router(group.router)
 app.include_router(expense.router)
 app.include_router(balance.router)
 app.include_router(settlement.router)
+app.include_router(ai.router)
 
 @app.get("/health")
 async def health_check():

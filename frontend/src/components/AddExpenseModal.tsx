@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, Calendar, Users, FileText, PieChart, LayoutGrid, Scale } from 'lucide-react';
+import { X, Loader2, Calendar, Users, FileText, PieChart, LayoutGrid, Scale, Sparkles, Wand2 } from 'lucide-react';
 import clsx from 'clsx';
 import { api } from '../api/api';
 import { ModalPortal } from './ModalPortal';
@@ -44,6 +44,11 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
   const [splitMode, setSplitMode] = useState<'equal' | 'custom' | 'percentage'>('equal');
   const [splits, setSplits] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // MintSense state
+  const [mintSenseInput, setMintSenseInput] = useState('');
+  const [isMintSenseLoading, setIsMintSenseLoading] = useState(false);
+  const [showMintSense, setShowMintSense] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -102,22 +107,71 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
     }
   };
 
+  const handleMintSense = async () => {
+    if (!mintSenseInput.trim() || !selectedGroupId) return;
+
+    setIsMintSenseLoading(true);
+    try {
+      const result = await api.post('/ai/extract-expense', {
+        text: mintSenseInput,
+        group_id: selectedGroupId
+      });
+
+      if (result.description) setDescription(result.description);
+      if (result.amount) setAmount(result.amount.toString());
+      if (result.payer_name) {
+        // Handle "me" or similar if the AI returns it
+        if (result.payer_name.toLowerCase() === 'me' || result.payer_name.toLowerCase() === 'i') {
+          setPayerName(user.name);
+        } else {
+          setPayerName(result.payer_name);
+        }
+      }
+      if (result.split_mode) setSplitMode(result.split_mode);
+      
+      // If AI suggested specific splits, apply them
+      if (result.split_details) {
+        setSplits(prevSplits => prevSplits.map(s => {
+          const splitItem = result.split_details.find((item: any) => item.name === s.participant_name);
+          if (splitItem) {
+            const val = splitItem.value;
+            return {
+              ...s,
+              owed_share: result.split_mode === 'custom' ? val : s.owed_share,
+              percentage: result.split_mode === 'percentage' ? val.toString() : s.percentage
+            };
+          }
+          return s;
+        }));
+      }
+      
+      setMintSenseInput('');
+      setShowMintSense(false);
+    } catch (err: any) {
+      alert('MintSense: ' + (err.message || 'Failed to process text'));
+    } finally {
+      setIsMintSenseLoading(false);
+    }
+  };
+
   const handleSplitValueChange = (index: number, field: string, value: string) => {
     const nextSplits = [...splits];
-    nextSplits[index][field] = parseFloat(value) || 0;
+    // Keep as string to allow typing decimals without immediate jumps
+    nextSplits[index][field] = value;
     setSplits(nextSplits);
   };
 
   const validateSplits = () => {
     const total = parseFloat(amount);
     if (splitMode === 'percentage') {
-      const sumPercent = splits.reduce((acc, s) => acc + (s.percentage || 0), 0);
-      if (Math.abs(sumPercent - 100) > 0.1) {
+      const sumPercent = splits.reduce((acc, s) => acc + (parseFloat(s.percentage) || 0), 0);
+      // Using a slightly wider tolerance for float math, but 0.1 is usually safe
+      if (Math.abs(sumPercent - 100) > 0.01) {
         alert('Percentages must sum to exactly 100%');
         return false;
       }
     } else if (splitMode === 'custom') {
-      const sumAmount = splits.reduce((acc, s) => acc + (s.owed_share || 0), 0);
+      const sumAmount = splits.reduce((acc, s) => acc + (parseFloat(s.owed_share) || 0), 0);
       if (Math.abs(sumAmount - total) > 0.01) {
         alert(`Custom amounts must sum to the total amount (${total})`);
         return false;
@@ -128,7 +182,10 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedGroupId || !description || !amount || !payerName) return;
+    if (!selectedGroupId || !description || !amount || !payerName) {
+      alert('Please fill in all required fields (Group, Description, Amount, Payer)');
+      return;
+    }
     if (!validateSplits()) return;
 
     setIsSubmitting(true);
@@ -142,8 +199,8 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
         split_mode: splitMode,
         splits: splits.map(s => ({
           participant_name: s.participant_name,
-          owed_share: splitMode === 'custom' ? s.owed_share : 0,
-          percentage: splitMode === 'percentage' ? s.percentage : undefined
+          owed_share: splitMode === 'custom' ? parseFloat(s.owed_share) || 0 : 0,
+          percentage: splitMode === 'percentage' ? parseFloat(s.percentage) || 0 : undefined
         }))
       };
 
@@ -170,10 +227,10 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
   };
 
   const amountNum = parseFloat(amount) || 0;
-  const pctSum = splits.reduce((acc, s) => acc + (Number(s.percentage) || 0), 0);
-  const customSum = splits.reduce((acc, s) => acc + (Number(s.owed_share) || 0), 0);
+  const pctSum = splits.reduce((acc, s) => acc + (parseFloat(s.percentage) || 0), 0);
+  const customSum = splits.reduce((acc, s) => acc + (parseFloat(s.owed_share) || 0), 0);
   const equalShare = splits.length > 0 && amountNum > 0 ? amountNum / splits.length : 0;
-  const pctOk = Math.abs(pctSum - 100) <= 0.1;
+  const pctOk = Math.abs(pctSum - 100) <= 0.01;
   const customOk = Math.abs(customSum - amountNum) <= 0.01;
   const pctBarPct = Math.min((pctSum / 100) * 100, 100);
   const customBarPct =
@@ -190,8 +247,55 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
             <h2 className="text-gradient">{initialData ? 'Edit Expense' : 'Add New Expense'}</h2>
             <p className="text-muted text-small">Split a bill with your group</p>
           </div>
-          <button type="button" className="close-btn" onClick={onClose} aria-label="Close"><X size={24} /></button>
+          <div className="flex-center gap-2">
+            {!initialData && (
+              <button 
+                type="button" 
+                className={clsx("btn-secondary flex-center gap-2 py-1 px-3 text-small", showMintSense && "bg-primary/10 border-primary")}
+                onClick={() => setShowMintSense(!showMintSense)}
+              >
+                <Sparkles size={16} className={showMintSense ? "text-primary" : ""} />
+                <span>MintSense</span>
+              </button>
+            )}
+            <button type="button" className="close-btn" onClick={onClose} aria-label="Close"><X size={24} /></button>
+          </div>
         </header>
+
+        {showMintSense && !initialData && (
+          <div className="mint-sense-panel animate-fade-in shadow-xl">
+            <div className="ai-shimmer-bg" />
+            <div className="mint-sense-header">
+              <div className="mint-sense-badge">
+                <Sparkles size={14} className="animate-pulse" />
+                <span>MintSense AI</span>
+              </div>
+              <span className="mint-sense-prompt-tip">
+                "Dinner last night for 45.50 paid by Shreya"
+              </span>
+            </div>
+            <div className="mint-sense-input-container">
+              <input 
+                type="text" 
+                className="mint-sense-input"
+                placeholder="Describe the expense naturally..."
+                value={mintSenseInput}
+                onChange={(e) => setMintSenseInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleMintSense())}
+                autoFocus
+              />
+              <button 
+                type="button" 
+                className="btn-mint-sense"
+                onClick={handleMintSense}
+                disabled={isMintSenseLoading || !mintSenseInput.trim()}
+                title="Process with AI"
+              >
+                {isMintSenseLoading ? <Loader2 className="animate-spin" size={20} /> : <Wand2 size={20} />}
+              </button>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="modal-form flex-column gap-6">
           <div className="input-group">
@@ -363,6 +467,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, user, groupId, initialDat
                           onChange={(e) => handleSplitValueChange(i, 'percentage', e.target.value)}
                           placeholder="0"
                           aria-label={`Percentage for ${s.participant_name}`}
+                          className="input-base"
                         />
                         <span className="split-field-prefix">%</span>
                       </div>
