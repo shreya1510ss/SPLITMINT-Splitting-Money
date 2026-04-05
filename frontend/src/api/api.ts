@@ -1,5 +1,9 @@
 const viteApiUrl = import.meta.env.VITE_API_URL;
-const BASE_URL = (viteApiUrl ? viteApiUrl.replace(/\/$/, '') : '') + '/api';
+// Ensure no double slashes and correct /api suffix
+const cleanViteUrl = viteApiUrl ? viteApiUrl.replace(/\/$/, '') : '';
+const BASE_URL = cleanViteUrl ? `${cleanViteUrl}/api` : '/api';
+
+console.log('API Base URL:', BASE_URL);
 
 let jwtToken = localStorage.getItem('splitmint_token') || '';
 

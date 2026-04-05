@@ -5,13 +5,17 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="SplitMint API")
 
 # Setup CORS to allow our React frontend to communicate with this backend
+# We allow all origins in development and specific ones in production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
-    allow_credentials=False,
+    allow_origins=[
+        "https://splitmint-splitting-money.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"]
 )
 
 app.include_router(auth.router)
