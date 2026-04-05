@@ -20,9 +20,17 @@ const handleResponse = async (response: Response) => {
       if (errorData && errorData.detail) {
         // Handle both string and array details from FastAPI
         if (Array.isArray(errorData.detail)) {
-          errorMessage = errorData.detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
+          errorMessage = errorData.detail.map((d: any) => {
+            const msg = d.msg || JSON.stringify(d);
+            // Replace generic Pydantic message with user-friendly version
+            if (msg.toLowerCase().includes('string should have at least 6 characters')) {
+              return 'Password should have at least 6 characters';
+            }
+            // If it's a value error from our custom validator, clean up the 'Value error, ' prefix
+            return msg.replace(/^Value error, /, '');
+          }).join(', ');
         } else {
-          errorMessage = errorData.detail;
+          errorMessage = errorData.detail.replace(/^Value error, /, '');
         }
       }
     } catch (e) {
