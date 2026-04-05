@@ -12,7 +12,11 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import jwt
-from passlib.context import CryptContext
+import bcrypt
+from datetime import datetime, timedelta
+from typing import Optional
+
+import jwt
 
 # ---------------------------------------------------------------------------
 # Configuration – read from environment (fallback to sensible defaults)
@@ -23,37 +27,30 @@ ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
 DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
 
 # ---------------------------------------------------------------------------
-# Password handling – bcrypt via passlib
+# Password handling – direct bcrypt (replaces passlib for Python 3.14 compatibility)
 # ---------------------------------------------------------------------------
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def _truncate_to_72_bytes(value: str) -> str:
-    """Truncate a string so its UTF‑8 byte length does not exceed 72.
-
-    bcrypt internally works on raw bytes and limits the input to 72 bytes.
-    This helper encodes to UTF‑8, slices the first 72 bytes, and decodes back
-    (ignoring any incomplete multibyte sequence). The result is safe to pass
-    to ``pwd_context.hash`` or ``pwd_context.verify``.
-    """
-    # Encode, slice, then decode ignoring errors (drops a trailing partial char)
-    return value.encode("utf-8")[:72].decode("utf-8", "ignore")
 
 def hash_password(password: str) -> str:
     """Return a bcrypt hash of ``password``.
-
-    The password is truncated to 72 bytes before hashing to satisfy bcrypt's
-    limitation.
+    
+    Bcrypt automatically handles salt generation and limits input to 72 bytes.
+    We encode the password to bytes before hashing.
     """
-    safe_password = _truncate_to_72_bytes(password)
-    return pwd_context.hash(safe_password)
+    # bcrypt.hashpw expects bytes. We truncate to 72 bytes to be safe, 
+    # though bcrypt usually does this internally.
+    pw_bytes = password.encode("utf-8")[:72]
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(pw_bytes, salt)
+    return hashed.decode("utf-8")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify ``plain_password`` against ``hashed_password``.
-
-    The plain password is truncated in the same way as during hashing.
-    """
-    safe_password = _truncate_to_72_bytes(plain_password)
-    return pwd_context.verify(safe_password, hashed_password)
+    """Verify ``plain_password`` against ``hashed_password``."""
+    pw_bytes = plain_password.encode("utf-8")[:72]
+    hashed_bytes = hashed_password.encode("utf-8")
+    try:
+        return bcrypt.checkpw(pw_bytes, hashed_bytes)
+    except Exception:
+        return False
 
 # ---------------------------------------------------------------------------
 # JWT utilities
