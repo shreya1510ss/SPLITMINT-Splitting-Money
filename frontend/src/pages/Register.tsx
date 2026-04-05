@@ -22,7 +22,17 @@ const Register = () => {
       await register({ name, email, password });
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Please check your data.');
+      // Better error handling to avoid showing [object Object]
+      if (err.response && err.response.data && err.response.data.detail) {
+        const detail = err.response.data.detail;
+        if (Array.isArray(detail)) {
+          setError(detail.map((d: any) => d.msg).join(', '));
+        } else {
+          setError(detail);
+        }
+      } else {
+        setError(err.message || 'Registration failed. Please check your data.');
+      }
     } finally {
       setIsSubmitting(false);
     }
