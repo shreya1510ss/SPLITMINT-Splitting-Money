@@ -1,9 +1,18 @@
 const viteApiUrl = import.meta.env.VITE_API_URL;
-// Ensure no double slashes and correct /api suffix
-const cleanViteUrl = viteApiUrl ? viteApiUrl.replace(/\/$/, '') : '';
-const BASE_URL = cleanViteUrl ? `${cleanViteUrl}/api` : '/api';
 
-console.log('API Base URL:', BASE_URL);
+// 1. Remove trailing slash if present
+let baseUrl = viteApiUrl ? viteApiUrl.replace(/\/$/, '') : '';
+
+// 2. Ensure /api suffix is present in production
+if (baseUrl && !baseUrl.endsWith('/api')) {
+  baseUrl = `${baseUrl}/api`;
+} else if (!baseUrl) {
+  // 3. Fallback for local development
+  baseUrl = '/api';
+}
+
+export const BASE_URL = baseUrl;
+console.log('Final API URL being used:', BASE_URL);
 
 let jwtToken = localStorage.getItem('splitmint_token') || '';
 
