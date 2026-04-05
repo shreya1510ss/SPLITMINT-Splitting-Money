@@ -1,8 +1,22 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+import traceback
 from routers import auth, group, expense, balance, settlement
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="SplitMint API")
+
+# Global Error Handler to catch and return detailed errors for debugging
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": str(exc),
+            "traceback": traceback.format_exc(),
+            "path": request.url.path
+        }
+    )
 
 # Setup CORS to allow our React frontend to communicate with this backend
 # We allow all origins in development and specific ones in production
